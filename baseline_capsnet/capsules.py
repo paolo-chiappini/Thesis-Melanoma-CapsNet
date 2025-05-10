@@ -1,3 +1,5 @@
+# credits: https://github.com/danielhavir/capsule-network
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
