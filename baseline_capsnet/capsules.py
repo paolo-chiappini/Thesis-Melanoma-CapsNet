@@ -82,13 +82,13 @@ class RoutingCapsules(nn.Module):
         
         '''
         Procedure 1 Routing algorithm.  
-        1: procedure ROUTING(uˆj|i, r, l)
+        1: procedure ROUTING(u^j|i, r, l)
         2:      for all capsule i in layer l and capsule j in layer (l + 1): bij ← 0. 
         3:      for r iterations do 
         4:          for all capsule i in layer l: ci ← softmax(bi) . softmax computes Eq. 3 
-        5:          for all capsule j in layer (l + 1): sj ← ∑  i cij uˆj|i  
+        5:          for all capsule j in layer (l + 1): sj ← ∑  i cij u^j|i  
         6:          for all capsule j in layer (l + 1): vj ← squash(sj) . squash computes Eq. 1 
-        7:          for all capsule i in layer l and capsule j in layer (l + 1): bij ← bij + uˆj|i.vj  
+        7:          for all capsule i in layer l and capsule j in layer (l + 1): bij ← bij + u^j|i.vj  
                 return vj
         '''
         b = torch.zeros(batch_size, self.num_caps, self.input_caps, 1).to(self.device)
