@@ -32,7 +32,7 @@ class CapsNetTrainer:
         self.optimizer = optim.Adam(self.network.parameters(), lr=learning_rate)
         self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=lr_decay)
         print('Torch Model Built')
-        print(f'Total params count: {sum([prod(p.size()) for p in self.network.parameters])}')
+        print(f'Total params count: {sum([prod(p.size()) for p in self.network.parameters()])}')
         
     def __repr__(self):
         return repr(self.network)
