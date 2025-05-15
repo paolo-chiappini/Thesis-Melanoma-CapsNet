@@ -1,9 +1,5 @@
-import numpy as np
 import pandas as pd
 from os import path
-from sklearn import set_config
-from sklearn.preprocessing import LabelEncoder, FunctionTransformer
-from sklearn.pipeline import make_pipeline
 
 def preprocess_metadata(root, raw_csv, output_csv):
     df = pd.read_excel(path.join(root, raw_csv))
