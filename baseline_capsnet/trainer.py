@@ -33,6 +33,9 @@ class CapsNetTrainer:
         self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=lr_decay)
         print('Torch Model Built')
         print(f'Total params count: {sum([prod(p.size()) for p in self.network.parameters()])}')
+        print(f'Trainable params count: {sum([prod(p.size()) for p in self.network.parameters() if p.requires_grad])}')
+        print(f'Device: {self.device}')
+        print(f'Multi GPU: {self.multi_gpu}')
         
     def __repr__(self):
         return repr(self.network)

@@ -23,11 +23,11 @@ class BaseDataset(Dataset):
         return len(self.data)
     
     def __getitem__(self, index):
-        record = self.data.iloc(index)
+        record = self.data.iloc[index]
         image_id = record[self.image_id]
-        label = record(self.label)
+        label = record[self.label]
         
-        image_path = os.path.join(self.root, self.image_path, image_id, image_id + self.image_extension)
+        image_path = os.path.join(self.root, self.image_path, image_id, image_id + "." + self.image_extension)
         image = Image.open(image_path).convert('RGB')
         
         if self.transform:

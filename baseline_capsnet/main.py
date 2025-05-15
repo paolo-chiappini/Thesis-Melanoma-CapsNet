@@ -1,8 +1,14 @@
 import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import torch
 import torch_directml
 from torchvision import datasets, transforms
 from trainer import CapsNetTrainer
+import argparse
+from utils.loaders import get_dataset
 
 multi_gpu = False
 # Try CUDA
@@ -26,10 +32,28 @@ print(f'''
 ==================================================================
 ''')
 
-exit()
+parser = argparse.ArgumentParser()
+parser.add_argument('--data_root', default='data')
+parser.add_argument('--dataset', default='PH2', choices=['PH2', 'ISIC'], help='Dataset to use: PH2 or ISIC')
 
-DATA_PATH = os.path.join('baseline_capsnet/')
+args = parser.parse_args()
+if args.data_root:
+    if not os.path.exists(args.data_root):
+        raise FileNotFoundError(f"Data root path does not exist: {args.data_root}")
+    else:
+        print(f"Using data root path: {args.data_root}")
+DATA_PATH = args.data_root
 
+transform = transforms.Compose([
+    transforms.Resize((299, 299)),
+    transforms.ToTensor(),
+])
+
+# switch between datasets
+dataset = get_dataset(args.dataset, DATA_PATH, transform=transform)
+if dataset is None:
+    print(f"Dataset not found: {args.dataset}")
+    exit()
 
 epochs = 50
 batch_size = 128
@@ -46,12 +70,15 @@ transform = transforms.Compose([
     transforms.ToTensor(),
 ])
 
-loaders = {}
-trainset = datasets.ImageFolder(os.path.join(DATA_PATH, 'train'), transform)
-loaders['train'] = torch.utils.data.DataLoader(trainset, batch_size, shuffle=True, num_workers=2)
 
-testset = datasets.ImageFolder(os.path.join(DATA_PATH, 'test'), transform)
-loaders['test'] = torch.utils.data.DataLoader(testset, batch_size, shuffle=True, num_workers=2)
+def main():
+    loaders = {}
+    loaders['train'] = torch.utils.data.DataLoader(dataset, batch_size, shuffle=True, num_workers=(0 if not multi_gpu else 2), pin_memory=True)
 
-caps_net = CapsNetTrainer(loaders, batch_size, learning_rate, routing_steps, lr_decay, device, multi_gpu)
-caps_net.run(epochs, classes)
+    caps_net = CapsNetTrainer(loaders, batch_size, learning_rate, routing_steps, lr_decay, device=device, multi_gpu=multi_gpu)
+    caps_net.run(epochs, classes)
+
+if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
+    main()
