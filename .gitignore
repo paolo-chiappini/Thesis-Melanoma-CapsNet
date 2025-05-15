@@ -175,3 +175,6 @@ cython_debug/
 
 # temporary files
 temp
+
+# datasets 
+data
