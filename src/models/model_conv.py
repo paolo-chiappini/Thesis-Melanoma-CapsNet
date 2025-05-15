@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import capsules as caps
+from . import capsules as caps
 from numpy import prod
 
 class Conv2d_BN(nn.Module): 

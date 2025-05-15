@@ -1,12 +1,8 @@
 import os
-import sys
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import torch
 import torch_directml
-from torchvision import datasets, transforms
-from trainer import CapsNetTrainer
+from torchvision import transforms
+from trainers import trainer_conv
 import argparse
 from utils.loaders import get_dataset
 
@@ -60,7 +56,7 @@ batch_size = 128
 learning_rate = 1e-3
 routing_steps = 3
 lr_decay = 0.96
-classes = range(2) # Benign 0, Malign 1
+classes = range(2) # Benign 0, Malignant 1
 
 if (torch.cuda.is_available() and torch.cuda.device_count() > 1): 
     batch_size *= torch.cuda.device_count()
@@ -75,7 +71,7 @@ def main():
     loaders = {}
     loaders['train'] = torch.utils.data.DataLoader(dataset, batch_size, shuffle=True, num_workers=(0 if not multi_gpu else 2), pin_memory=True)
 
-    caps_net = CapsNetTrainer(loaders, batch_size, learning_rate, routing_steps, lr_decay, device=device, multi_gpu=multi_gpu)
+    caps_net = trainer_conv.CapsNetTrainer(loaders, batch_size, learning_rate, routing_steps, lr_decay, device=device, multi_gpu=multi_gpu)
     caps_net.run(epochs, classes)
 
 if __name__ == '__main__':

@@ -7,8 +7,8 @@ import os
 from numpy import prod
 from datetime import datetime
 from time import time 
-from model_conv import CapsuleNetwork
-from losses import CapsuleLoss
+from src.models.model_conv import CapsuleNetwork
+from src.utils.losses.losses import CapsuleLoss
 
 CHECKPOINTS_PATH = 'checkpoints/'
 if not os.path.exists(CHECKPOINTS_PATH):
