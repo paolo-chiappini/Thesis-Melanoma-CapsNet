@@ -7,7 +7,7 @@ import os
 from numpy import prod
 from datetime import datetime
 from time import time 
-from model import CapsuleNetwork
+from model_conv import CapsuleNetwork
 from losses import CapsuleLoss
 
 CHECKPOINTS_PATH = 'checkpoints/'
