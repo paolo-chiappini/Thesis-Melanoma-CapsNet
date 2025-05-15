@@ -2,7 +2,7 @@ import os
 import torch
 import torch_directml
 from torchvision import transforms
-from trainers import trainer_conv
+from trainers import trainer_simple
 import argparse
 from utils.loaders import get_dataset
 
@@ -71,7 +71,7 @@ def main():
     loaders = {}
     loaders['train'] = torch.utils.data.DataLoader(dataset, batch_size, shuffle=True, num_workers=(0 if not multi_gpu else 2), pin_memory=True)
 
-    caps_net = trainer_conv.CapsNetTrainer(loaders, batch_size, learning_rate, routing_steps, lr_decay, device=device, multi_gpu=multi_gpu)
+    caps_net = trainer_simple.CapsNetTrainer(loaders, batch_size, learning_rate, routing_steps, lr_decay, device=device, multi_gpu=multi_gpu)
     caps_net.run(epochs, classes)
 
 if __name__ == '__main__':

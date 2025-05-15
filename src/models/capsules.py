@@ -33,12 +33,12 @@ class PrimaryCapsules(nn.Module):
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding)
     
     def forward(self, x):
-        x = self.conv(x)
-        # Reshape output (batch_size, C_caps, H_caps, W_caps, caps_dim)
-        x = x.view(x.size(0), self._caps_channels, x.size(2), x.size(3), self.caps_dim)
+        out = self.conv(x)
+        # Reshape output (batch_size, C_caps, H_caps, W_caps, caps_dim)    
+        out = out.view(out.size(0), self._caps_channels, out.size(2), out.size(3), self.caps_dim)
         # Flatten outpus into (batch_size, C_caps * H_caps * W_caps, caps_dim)
-        x = x.view(x.size(0), -1, self.caps_dim)
-        return squash(x)
+        out = out.view(out.size(0), -1, self.caps_dim)
+        return squash(out)
     
     
 class RoutingCapsules(nn.Module):

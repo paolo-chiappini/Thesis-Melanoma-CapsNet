@@ -7,8 +7,8 @@ import os
 from numpy import prod
 from datetime import datetime
 from time import time 
-from src.models.model_conv import CapsuleNetwork
-from src.utils.losses.losses import CapsuleLoss
+from models.model_simple import CapsuleNetwork
+from utils.losses.losses import CapsuleLoss
 
 CHECKPOINTS_PATH = 'checkpoints/'
 if not os.path.exists(CHECKPOINTS_PATH):
@@ -23,7 +23,7 @@ class CapsNetTrainer:
         self.loaders = loaders
         img_shape = self.loaders['train'].dataset[0][0].numpy().shape
         
-        self.network = CapsuleNetwork(img_shape, channels=256, primary_dim=32, num_classes=2, output_dim=64, routing_steps=routing_steps, device=self.device).to(self.device)
+        self.network = CapsuleNetwork(img_shape, channels=256, primary_dim=8, num_classes=2, output_dim=16, routing_steps=routing_steps, device=self.device).to(self.device)
         
         if self.multi_gpu:
             self.network = nn.DataParallel(self.network)
@@ -31,8 +31,8 @@ class CapsNetTrainer:
         self.loss_function = CapsuleLoss(loss_lambda=0.4, recontruction_loss_scale=5e-4)
         self.optimizer = optim.Adam(self.network.parameters(), lr=learning_rate)
         self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=lr_decay)
-        print('Torch Model Built')
-        print(f'Total params count: {sum([prod(p.size()) for p in self.network.parameters()])}')
+        print(8*'#', 'PyTorch Model built'.upper(), 8*'#')
+        print('Num params:', sum([prod(p.size()) for p in self.network.parameters()]))
         print(f'Trainable params count: {sum([prod(p.size()) for p in self.network.parameters() if p.requires_grad])}')
         print(f'Device: {self.device}')
         print(f'Multi GPU: {self.multi_gpu}')
