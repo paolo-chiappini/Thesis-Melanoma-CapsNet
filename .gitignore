@@ -178,3 +178,6 @@ temp
 
 # datasets 
 data
+
+# saved models
+checkpoints
