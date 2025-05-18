@@ -2,11 +2,11 @@ import os
 import sys
 import torch
 from torchvision import transforms
-from trainers import trainer_simple
+from trainers import trainer_simple, trainer_conv_custom
 import argparse
 from utils.loaders import get_dataset
 
-trainer = trainer_simple
+trainer = trainer_conv_custom
 
 multi_gpu = False
 # Try CUDA
@@ -52,6 +52,7 @@ parser.add_argument(
     choices=["PH2", "ISIC"],
     help="Dataset to use: PH2 or ISIC",
 )
+parser.add_argument("--cpu", action="store_true", help="Use CPU for training")
 
 args = parser.parse_args()
 if args.data_root:
@@ -61,7 +62,12 @@ if args.data_root:
         print(f"Using data root path: {args.data_root}")
 DATA_PATH = args.data_root
 
-size = 32  # 268 for conv
+if args.cpu:
+    print("=" * 10, "Running on CPU (OVERRIDING DEVICE)", "=" * 10)
+    device = torch.device("cpu")
+    multi_gpu = False
+
+size = 284  # 284 for conv encoder form Perér et al.
 transform = transforms.Compose(
     [
         transforms.Resize((size, size)),
