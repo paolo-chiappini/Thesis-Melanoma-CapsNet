@@ -6,6 +6,8 @@ from trainers import trainer_simple
 import argparse
 from utils.loaders import get_dataset
 
+trainer = trainer_simple
+
 multi_gpu = False
 # Try CUDA
 if torch.cuda.is_available() and torch.cuda.device_count() > 0:
@@ -59,9 +61,10 @@ if args.data_root:
         print(f"Using data root path: {args.data_root}")
 DATA_PATH = args.data_root
 
+size = 32  # 268 for conv
 transform = transforms.Compose(
     [
-        transforms.Resize((32, 32)),
+        transforms.Resize((size, size)),
         transforms.ToTensor(),
     ]
 )
@@ -101,7 +104,7 @@ def main():
         pin_memory=True,
     )
 
-    caps_net = trainer_simple.CapsNetTrainer(
+    caps_net = trainer.CapsNetTrainer(
         loaders,
         batch_size,
         learning_rate,
