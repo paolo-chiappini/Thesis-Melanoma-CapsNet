@@ -5,6 +5,7 @@ from torchvision import transforms
 from trainers import trainer_simple, trainer_conv_custom
 import argparse
 from utils.loaders import get_dataset
+from utils.callbacks import PlotCallback, ReconstructionCallback, CallbackManager
 
 trainer = trainer_conv_custom
 
@@ -119,7 +120,12 @@ def main():
         device=device,
         multi_gpu=multi_gpu,
     )
-    caps_net.run(epochs, classes)
+
+    callbacks = [PlotCallback(), ReconstructionCallback(frequency=1)]
+    callback_manager = CallbackManager(callbacks)
+
+    caps_net.run(epochs, classes, callback_manager=callback_manager)
+    print("=" * 10, "Run finished", "=" * 10)
 
 
 if __name__ == "__main__":

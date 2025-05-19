@@ -181,3 +181,8 @@ data
 
 # saved models
 checkpoints
+
+# logs and output plots
+logs
+plots
+reconstructions

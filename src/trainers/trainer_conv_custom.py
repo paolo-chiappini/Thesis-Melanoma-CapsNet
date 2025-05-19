@@ -80,7 +80,7 @@ class CapsNetTrainer:
     def __repr__(self):
         return repr(self.network)
 
-    def run(self, epochs, classes):
+    def run(self, epochs, classes, callback_manager=None):
         print(8 * "#", "Run started".upper(), 8 * "#")
         eye = torch.eye(len(classes)).to(self.device)
 
@@ -124,10 +124,38 @@ class CapsNetTrainer:
                             f"Accuracy {accuracy} Time {round(time()-t1, 3)}s",
                         )
 
+                        if callback_manager is not None:
+                            callback_manager.on_batch_end(
+                                batch=i,
+                                logs={
+                                    "loss": running_loss / (i + 1),
+                                    "accuracy": accuracy,
+                                    "epoch": epoch,
+                                    "phase": phase,
+                                },
+                            )
+
                 print(
                     f"{phase.upper()} Epoch {epoch}, Loss {running_loss/(i+1)}",
                     f"Accuracy {accuracy} Time {round(time()-t0, 3)}s",
                 )
+
+                if callback_manager is not None:
+                    callback_manager.on_epoch_end(
+                        epoch=epoch,
+                        logs={
+                            "loss": running_loss / (i + 1),
+                            "accuracy": accuracy,
+                            "epoch": epoch,
+                            "phase": phase,
+                        },
+                    )
+
+                # Periodically visualize reconstructions (e.g. every 5 epochs on test phase)
+                if phase == "test":
+                    callback_manager.on_reconstruction(
+                        images[:8], reconstructions[:8], epoch, phase
+                    )
 
             self.scheduler.step()
 

@@ -69,24 +69,26 @@ class CapsuleNetwork(nn.Module):
         # (192, 64, 64) -> (192, 32, 32)
         self.max_pooling2d_2 = nn.MaxPool2d(kernel_size=kernel_size, stride=2)
 
-        # (192, 32, 32) -> (192, 16, 16)
+        # (192, 32, 32) -> (256, 16, 16)
         self.conv2d_6 = nn.Conv2d(
             192, caps_channels, kernel_size=kernel_size, stride=2, padding="valid"
         )
 
         # Capsules
-        self.primary = caps.PrimaryCapsules(caps_channels, caps_channels, primary_dim)
-
         caps_kernel_size = 9
-        # primary_caps = int(
-        #     caps_channels
-        #     / primary_dim
-        #     * (img_shape[1] - 2 * (caps_kernel_size - 1))
-        #     * (img_shape[2] - 2 * (caps_kernel_size - 1))
-        #     / 4
-        # )
-        # primary_caps = int(caps_channels / primary_dim * (16**2))
-        primary_caps = 512  # 4 x 4 feature maps for 32 capsules
+        caps_stride = 2
+        # (256, 16, 16) -> (256, 4, 4)
+        self.primary = caps.PrimaryCapsules(
+            caps_channels,
+            caps_channels,
+            primary_dim,
+            kernel_size=caps_kernel_size,
+            stride=caps_stride,
+            padding="valid",
+        )
+
+        primary_caps = 512  # 256 * 4 * 4
+
         self.digits = caps.RoutingCapsules(
             primary_dim,
             primary_caps,
