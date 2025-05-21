@@ -25,6 +25,7 @@ class CapsNetTrainer:
         lr_decay=0.9,
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         multi_gpu=(torch.cuda.device_count() > 1),
+        routing_algorithm="softmax",
     ):
         self.device = device
         self.multi_gpu = multi_gpu
@@ -40,6 +41,7 @@ class CapsNetTrainer:
             output_dim=16,
             routing_steps=routing_steps,
             device=self.device,
+            routing_algorithm=routing_algorithm,
         ).to(self.device)
 
         from torchinfo import summary

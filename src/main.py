@@ -2,7 +2,7 @@ import os
 import sys
 import torch
 from torchvision import transforms
-from trainers import trainer_simple, trainer_conv_custom
+from trainers import trainer_conv_custom
 import argparse
 from utils.loaders import get_dataset
 from utils.callbacks import PlotCallback, ReconstructionCallback, CallbackManager
@@ -119,6 +119,7 @@ def main():
         lr_decay,
         device=device,
         multi_gpu=multi_gpu,
+        routing_algorithm="sigmoid",
     )
 
     callbacks = [PlotCallback(), ReconstructionCallback(frequency=1)]

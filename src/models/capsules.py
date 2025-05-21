@@ -73,6 +73,7 @@ class RoutingCapsules(nn.Module):
         caps_dim,
         routing_steps,
         device: torch.device,
+        activations: str = "softmax",
     ):
         """
         Params:
@@ -89,6 +90,13 @@ class RoutingCapsules(nn.Module):
         self.caps_dim = caps_dim
         self.routing_steps = routing_steps
         self.device = device
+        self.activations = activations
+
+        assert activations in [
+            "sigmoid",
+            "softmax",
+        ], "Activation function must be either 'sigmoid' or 'softmax'"
+
         # Random initialization of the W matrix
         self.W = nn.Parameter(
             0.01 * torch.randn(1, num_caps, input_caps, caps_dim, input_dim)
@@ -125,15 +133,22 @@ class RoutingCapsules(nn.Module):
         7:          for all capsule i in layer l and capsule j in layer (l + 1): bij ← bij + u^j|i.vj  
                 return vj
         """
+
         b = torch.zeros(batch_size, self.num_caps, self.input_caps, 1).to(self.device)
         for r in range(self.routing_steps - 1):
-            c = F.softmax(b, dim=1)
+            if self.activations == "sigmoid":
+                c = torch.sigmoid(b)  # Sigmoid routing like in LaLonde et al.
+            elif self.activations == "softmax":
+                c = F.softmax(b, dim=1)
             s = (c * detached_u_hat).sum(dim=2)
             v = squash(s)
             b += torch.matmul(detached_u_hat, v.unsqueeze(-1))
 
         # Perform last iteration on attached u_hat
-        c = F.softmax(b, dim=1)
+        if self.activations == "sigmoid":
+            c = torch.sigmoid(b)  # Sigmoid routing like in LaLonde et al.
+        elif self.activations == "softmax":
+            c = F.softmax(b, dim=1)
         s = (c * u_hat).sum(dim=2)
         v = squash(s)
 
