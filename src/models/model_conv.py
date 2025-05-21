@@ -1,31 +1,8 @@
 import torch
 import torch.nn as nn
-from . import capsules as caps
 from numpy import prod
-
-
-class Conv2d_BN(nn.Module):
-    def __init__(
-        self, input_channels, output_channels, kernel_size=3, stride=1, padding="same"
-    ):
-        super(Conv2d_BN, self).__init__()
-        self.input_channels = input_channels
-        self.output_channels = output_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.padding = padding
-
-        self.conv = nn.Conv2d(
-            input_channels, output_channels, kernel_size, stride, padding, bias=False
-        )
-        self.bn = nn.BatchNorm2d(output_channels, affine=True)
-        self.activation = nn.ReLU(inplace=True)
-
-    def forward(self, x):
-        out = self.conv(x)
-        out = self.bn(out)
-        out = self.activation(out)
-        return out
+from layers import Conv2d_BN
+from layers import PrimaryCapsules, RoutingCapsules
 
 
 class CapsuleNetwork(nn.Module):
@@ -43,6 +20,7 @@ class CapsuleNetwork(nn.Module):
         routing_steps,
         device: torch.device,
         kernel_size=3,
+        routing_algorithm="softmax",
     ):
         super(CapsuleNetwork, self).__init__()
         self.img_shape = img_shape
@@ -78,7 +56,7 @@ class CapsuleNetwork(nn.Module):
         caps_kernel_size = 9
         caps_stride = 2
         # (256, 16, 16) -> (256, 4, 4)
-        self.primary = caps.PrimaryCapsules(
+        self.primary = PrimaryCapsules(
             caps_channels,
             caps_channels,
             primary_dim,
@@ -89,13 +67,14 @@ class CapsuleNetwork(nn.Module):
 
         primary_caps = 512  # 256 * 4 * 4
 
-        self.digits = caps.RoutingCapsules(
+        self.digits = RoutingCapsules(
             primary_dim,
             primary_caps,
             num_classes,
             output_dim,
             routing_steps,
             device=self.device,
+            routing_algorithm=routing_algorithm,
         )
 
         # Decoder
@@ -119,7 +98,7 @@ class CapsuleNetwork(nn.Module):
         out = self.conv2d_6(out)
         out = self.primary(out)
         out = self.digits(out)
-        preds = torch.norm(out, dim=-1)
+        preds = torch.norm(out, dim=-1)  # Length layer form LaLonde
 
         # Reconstruct image
         _, max_length_idx = preds.max(dim=1)
