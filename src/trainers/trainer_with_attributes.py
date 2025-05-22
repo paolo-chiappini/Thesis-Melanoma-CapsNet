@@ -7,8 +7,8 @@ import os
 from numpy import prod
 from datetime import datetime
 from time import time
-from models.model_conv import CapsuleNetwork
-from utils.losses.losses import CapsuleLoss
+from models.model_conv_attributes import CapsuleNetworkWithAttributes
+from utils.losses.losses import CombinedLoss
 
 CHECKPOINTS_PATH = "checkpoints/"
 if not os.path.exists(CHECKPOINTS_PATH):
@@ -33,11 +33,12 @@ class CapsNetTrainer:
         self.loaders = loaders
         img_shape = self.loaders["train"].dataset[0][0].numpy().shape
 
-        self.network = CapsuleNetwork(
+        self.network = CapsuleNetworkWithAttributes(
             img_shape,
             channels=3,
             primary_dim=8,
             num_classes=2,
+            num_attributes=self.loaders["train"].dataset[0][2].shape[0],
             output_dim=16,
             routing_steps=routing_steps,
             device=self.device,
@@ -64,26 +65,17 @@ class CapsNetTrainer:
         if self.multi_gpu:
             self.network = nn.DataParallel(self.network)
 
-        self.loss_function = CapsuleLoss(loss_lambda=0.4, recontruction_loss_scale=5e-4)
+        self.loss_function = CombinedLoss()
         self.optimizer = optim.Adam(self.network.parameters(), lr=learning_rate)
         self.scheduler = optim.lr_scheduler.ExponentialLR(
             self.optimizer, gamma=lr_decay
         )
-        print("Torch Model Built")
-        print(
-            f"Total params count: {sum([prod(p.size()) for p in self.network.parameters()])}"
-        )
-        print(
-            f"Trainable params count: {sum([prod(p.size()) for p in self.network.parameters() if p.requires_grad])}"
-        )
-        print(f"Device: {self.device}")
-        print(f"Multi GPU: {self.multi_gpu}")
 
     def __repr__(self):
         return repr(self.network)
 
     def run(self, epochs, classes, callback_manager=None):
-        print(8 * "#", "Run started".upper(), 8 * "#")
+        print(8 * "=", "Run started".upper(), 8 * "=")
         eye = torch.eye(len(classes)).to(self.device)
 
         for epoch in range(1, epochs + 1):
@@ -98,15 +90,24 @@ class CapsNetTrainer:
                 running_loss = 0.0
                 correct = 0
                 total = 0
-                for i, (images, labels, _) in enumerate(self.loaders[phase]):
+                for i, (images, labels, visual_attributes) in enumerate(
+                    self.loaders[phase]
+                ):
                     t1 = time()
                     images, labels = images.to(self.device), labels.to(self.device)
                     labels = eye[labels]  # one-hot encoding
 
                     self.optimizer.zero_grad()
 
-                    outputs, reconstructions = self.network(images)
-                    loss = self.loss_function(outputs, labels, images, reconstructions)
+                    outputs, reconstructions, malignancy_scores = self.network(images)
+                    loss = self.loss_function(
+                        outputs,
+                        visual_attributes,
+                        malignancy_scores,
+                        labels,
+                        images,
+                        reconstructions,
+                    )
 
                     if phase == "train":
                         loss.backward()
@@ -114,7 +115,9 @@ class CapsNetTrainer:
 
                     running_loss += loss.item()
 
-                    _, predicted = torch.max(outputs, 1)
+                    # _, predicted = torch.max(outputs, 1)
+                    # _, labels = torch.max(labels, 1)
+                    _, predicted = torch.max(malignancy_scores, 1)
                     _, labels = torch.max(labels, 1)
                     total += labels.size(0)
                     correct += (predicted == labels).sum()
@@ -170,11 +173,15 @@ class CapsNetTrainer:
 
         class_correct = list(0.0 for _ in classes)
         class_total = list(0.0 for _ in classes)
-        for images, labels, _ in self.loaders["test"]:
-            images, labels = images.to(self.device), labels.to(self.device)
+        for images, labels, visual_attributes in self.loaders["test"]:
+            images, labels, visual_attributes = (
+                images.to(self.device),
+                labels.to(self.device),
+                visual_attributes.to(self.device),
+            )
 
-            outputs, reconstructions = self.network(images)
-            _, predicted = torch.max(outputs, 1)
+            outputs, reconstructions, malignancy_scores = self.network(images)
+            _, predicted = torch.max(malignancy_scores, 1)
             c = (predicted == labels).squeeze()
             for i in range(labels.size(0)):
                 label = labels[i]

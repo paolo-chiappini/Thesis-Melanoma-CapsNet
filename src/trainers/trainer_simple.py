@@ -83,7 +83,7 @@ class CapsNetTrainer:
                 running_loss = 0.0
                 correct = 0
                 total = 0
-                for i, (images, labels) in enumerate(self.loaders[phase]):
+                for i, (images, labels, _) in enumerate(self.loaders[phase]):
                     t1 = time()
                     images, labels = images.to(self.device), labels.to(self.device)
                     labels = eye[labels]  # one-hot encoding
@@ -127,7 +127,7 @@ class CapsNetTrainer:
 
         class_correct = list(0.0 for _ in classes)
         class_total = list(0.0 for _ in classes)
-        for images, labels in self.loaders["test"]:
+        for images, labels, _ in self.loaders["test"]:
             images, labels = images.to(self.device), labels.to(self.device)
 
             outputs, reconstructions = self.network(images)

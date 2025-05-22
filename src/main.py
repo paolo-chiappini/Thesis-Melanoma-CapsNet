@@ -2,12 +2,12 @@ import os
 import sys
 import torch
 from torchvision import transforms
-from trainers import trainer_conv_custom
+from trainers import trainer_conv_custom, trainer_with_attributes
 import argparse
 from utils.loaders import get_dataset
 from utils.callbacks import PlotCallback, ReconstructionCallback, CallbackManager
 
-trainer = trainer_conv_custom
+trainer = trainer_with_attributes
 
 multi_gpu = False
 # Try CUDA
@@ -15,6 +15,7 @@ if torch.cuda.is_available() and torch.cuda.device_count() > 0:
     RUN_MODE = "cuda"
     device = torch.device("cuda")
     multi_gpu = torch.cuda.device_count() > 1
+    torch.cuda.empty_cache()
 # Fallback to directml (for AMD GPU)
 elif sys.platform.startswith("win"):
     # Check if DirectML is available
@@ -134,3 +135,4 @@ if __name__ == "__main__":
 
     multiprocessing.freeze_support()
     main()
+    torch.cuda.empty_cache()

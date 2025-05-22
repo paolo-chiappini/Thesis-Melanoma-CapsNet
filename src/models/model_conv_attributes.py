@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
+from layers import Conv2d_BN, PrimaryCapsules, RoutingCapsules, MalignancyPredictor
 from numpy import prod
-from layers import Conv2d_BN
-from layers import PrimaryCapsules, RoutingCapsules
 from utils.layer_output_shape import get_network_output_shape
 
 
-class CapsuleNetwork(nn.Module):
+class CapsuleNetworkWithAttributes(nn.Module):
     """
     Network architecture from Pérez and Ventura DOI: 10.3390/cancers13194974
+    combined with visual attributes training from LaLonde et al. DOI: 10.48550/arXiv.1909.05926
     """
 
     def __init__(
@@ -17,15 +17,17 @@ class CapsuleNetwork(nn.Module):
         channels,
         primary_dim,
         num_classes,
+        num_attributes,
         output_dim,
         routing_steps,
         device: torch.device,
         kernel_size=3,
         routing_algorithm="softmax",
     ):
-        super(CapsuleNetwork, self).__init__()
+        super(CapsuleNetworkWithAttributes, self).__init__()
         self.img_shape = img_shape
         self.num_classes = num_classes
+        self.num_attributes = num_attributes
         self.device = device
         caps_channels = 256
 
@@ -69,16 +71,22 @@ class CapsuleNetwork(nn.Module):
         self.digits = RoutingCapsules(
             primary_dim,
             primary_caps,
-            num_classes,
+            num_attributes,
             output_dim,
             routing_steps,
             device=self.device,
             routing_algorithm=routing_algorithm,
         )
 
+        self.malignancy_fc = MalignancyPredictor(
+            num_attributes=num_attributes,
+            capsule_dim=output_dim,
+            output_dim=num_classes,
+        )
+
         # Decoder
         decoder_layers = [
-            nn.Linear(output_dim * num_classes, 512),
+            nn.Linear(output_dim * num_attributes, 512),
             nn.ReLU(inplace=True),
             nn.Linear(512, 1024),
             nn.ReLU(inplace=True),
@@ -92,14 +100,16 @@ class CapsuleNetwork(nn.Module):
             x = layer(x)
         out = self.primary(x)
         out = self.digits(out)
+
+        malignancy_scores = self.malignancy_fc(out)
         preds = torch.norm(out, dim=-1)  # Length layer form LaLonde
 
         # Reconstruct image
         _, max_length_idx = preds.max(dim=1)
-        y = torch.eye(self.num_classes).to(self.device)
+        y = torch.eye(self.num_attributes).to(self.device)
         y = y.index_select(dim=0, index=max_length_idx).unsqueeze(2)
 
         reconstructions = self.decoder((out * y).view(out.size(0), -1))
         reconstructions = reconstructions.view(-1, *self.img_shape)
 
-        return preds, reconstructions
+        return preds, reconstructions, malignancy_scores
