@@ -3,6 +3,7 @@ import torch.nn as nn
 from numpy import prod
 from layers import Conv2d_BN
 from layers import PrimaryCapsules, RoutingCapsules
+from utils.layer_output_shape import get_network_output_shape
 
 
 class CapsuleNetwork(nn.Module):
@@ -29,33 +30,24 @@ class CapsuleNetwork(nn.Module):
         caps_channels = 256
 
         # Encoder
-        # (3, 270, 270) -> (32, 134, 134)
-        self.conv1 = Conv2d_BN(channels, 32, kernel_size, stride=2, padding="valid")
-        # (32, 134, 134) -> (32, 132, 132)
-        self.conv2 = Conv2d_BN(32, 32, kernel_size, padding="valid")
-        # (32, 132, 132) -> (64, 132, 132)
-        self.conv3 = Conv2d_BN(32, 64, kernel_size)
-
-        # (64, 132, 132) -> (64, 66, 66)
-        self.max_pooling2d_1 = nn.MaxPool2d(kernel_size=kernel_size, stride=2)
-
-        # (64, 66, 66) -> (80, 66, 66)
-        self.conv4 = Conv2d_BN(64, 80, kernel_size=1, padding="valid")
-        # (80, 66, 66) -> (192, 64, 64)
-        self.conv5 = Conv2d_BN(80, 192, kernel_size, padding="valid")
-
-        # (192, 64, 64) -> (192, 32, 32)
-        self.max_pooling2d_2 = nn.MaxPool2d(kernel_size=kernel_size, stride=2)
-
-        # (192, 32, 32) -> (256, 16, 16)
-        self.conv2d_6 = nn.Conv2d(
-            192, caps_channels, kernel_size=kernel_size, stride=2, padding="valid"
-        )
+        encoder_layers = [
+            Conv2d_BN(channels, 32, kernel_size, stride=2, padding="valid"),
+            Conv2d_BN(32, 32, kernel_size, padding="valid"),
+            Conv2d_BN(32, 64, kernel_size),
+            nn.MaxPool2d(kernel_size=kernel_size, stride=2),
+            Conv2d_BN(64, 80, kernel_size=1, padding="valid"),
+            Conv2d_BN(80, 192, kernel_size, padding="valid"),
+            nn.MaxPool2d(kernel_size=kernel_size, stride=2),
+            nn.Conv2d(
+                192, caps_channels, kernel_size=kernel_size, stride=2, padding="valid"
+            ),
+        ]
+        self.encoder = nn.Sequential(*encoder_layers)
 
         # Capsules
         caps_kernel_size = 9
         caps_stride = 2
-        # (256, 16, 16) -> (256, 4, 4)
+
         self.primary = PrimaryCapsules(
             caps_channels,
             caps_channels,
@@ -65,7 +57,14 @@ class CapsuleNetwork(nn.Module):
             padding="valid",
         )
 
-        primary_caps = 512  # 256 * 4 * 4
+        encoder_output_shape = get_network_output_shape(
+            (1, *img_shape),  # Add fictitious batch dimension to the input tensor
+            encoder_layers,
+            print_all=True,
+        )
+        capsules_output_shape = self.primary.get_output_shape(encoder_output_shape)
+        _, _, h_caps, w_caps = capsules_output_shape
+        primary_caps = self.primary._caps_num * h_caps * w_caps
 
         self.digits = RoutingCapsules(
             primary_dim,
@@ -78,25 +77,20 @@ class CapsuleNetwork(nn.Module):
         )
 
         # Decoder
-        self.decoder = nn.Sequential(
+        decoder_layers = [
             nn.Linear(output_dim * num_classes, 512),
             nn.ReLU(inplace=True),
             nn.Linear(512, 1024),
             nn.ReLU(inplace=True),
             nn.Linear(1024, int(prod(img_shape))),
             nn.Sigmoid(),
-        )
+        ]
+        self.decoder = nn.Sequential(*decoder_layers)
 
     def forward(self, x):
-        out = self.conv1(x)
-        out = self.conv2(out)
-        out = self.conv3(out)
-        out = self.max_pooling2d_1(out)
-        out = self.conv4(out)
-        out = self.conv5(out)
-        out = self.max_pooling2d_2(out)
-        out = self.conv2d_6(out)
-        out = self.primary(out)
+        for layer in self.encoder:
+            x = layer(x)
+        out = self.primary(x)
         out = self.digits(out)
         preds = torch.norm(out, dim=-1)  # Length layer form LaLonde
 
