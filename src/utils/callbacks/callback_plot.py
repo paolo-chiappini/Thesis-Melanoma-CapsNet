@@ -8,10 +8,11 @@ class PlotCallback(Callback):
     Callback to plot the training and validation loss and accuracy.
     """
 
-    def __init__(self, show=False, save_dir="plots"):
+    def __init__(self, show=False, save_dir="plots", name="loss_accuracy"):
         super().__init__()
         self.show = show
         self.save_dir = save_dir
+        self.name = name
 
         os.makedirs(self.save_dir, exist_ok=True)
 
@@ -52,5 +53,5 @@ class PlotCallback(Callback):
         if self.show:
             plt.show()
         else:
-            plt.savefig(os.path.join(self.save_dir, f"epoch_{epoch}.png"))
+            plt.savefig(os.path.join(self.save_dir, f"{self.name}.png"))
             plt.close()
