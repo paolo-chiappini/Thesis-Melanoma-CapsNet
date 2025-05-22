@@ -101,3 +101,7 @@ class RoutingCapsules(nn.Module):
         v = squash(s)
 
         return v
+
+    def get_output_shape(self, input_shape):
+        # Output shape is (batch_size, num_class_caps, capsule_dimension)
+        return (input_shape[0], self.num_class_caps, self.capsule_dimension)
