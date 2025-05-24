@@ -46,3 +46,21 @@ class BaseDataset(Dataset):
             image = self.transform(image)
 
         return image, label
+
+    def check_missing_files(self):
+        missing = 0
+        for _, row in self.data.iterrows():
+            image_id = row["image_name"]
+            image_path = os.path.join(
+                self.root,
+                self.image_path,
+                image_id,
+                f"{image_id}_Dermoscopic_Image",
+                f"{image_id}.bmp",
+            )
+            if not os.path.exists(image_path):
+                print(f"Missing: {image_path}")
+                missing += 1
+
+        print("Missing files:", missing)
+        assert missing < 1, "Found missing files"

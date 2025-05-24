@@ -11,6 +11,8 @@ import random
 import numpy as np
 from sklearn.model_selection import StratifiedShuffleSplit
 from utils.datasets import compute_mean_std
+from collections import Counter
+from tqdm import tqdm
 
 
 def set_seed(seed):
@@ -68,6 +70,12 @@ print(
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_root", default="data")
 parser.add_argument(
+    "--augment",
+    action="store_true",
+    help="Increase size of dataset with augmentations",
+)
+parser.add_argument("--meta", help="Metadata filename for the dataset", default=None)
+parser.add_argument(
     "--dataset",
     default="PH2",
     choices=["PH2", "ISIC"],
@@ -92,13 +100,7 @@ size = 284  # 284 for conv encoder form Perér et al.
 
 tensor_transform = T.Compose([T.Resize((500, 500)), T.ToTensor()])
 
-# switch between datasets
-dataset = get_dataset(args.dataset, DATA_PATH, transform=tensor_transform)
-if dataset is None:
-    print(f"Dataset not found: {args.dataset}")
-    exit()
-
-epochs = 3
+epochs = 50
 batch_size = 128
 learning_rate = 1e-3
 routing_steps = 3
@@ -110,6 +112,23 @@ if torch.cuda.is_available() and torch.cuda.device_count() > 1:
 
 
 def main():
+    # switch between datasets
+    dataset = get_dataset(
+        args.dataset,
+        DATA_PATH,
+        transform=tensor_transform,
+        metadata_path=args.meta,
+        augment=args.augment,
+    )
+    if dataset is None:
+        print(f"Dataset not found: {args.dataset}")
+        exit()
+
+    dataset.check_missing_files()
+
+    class_counts = Counter(dataset.labels)
+    print(f"Class counts: {class_counts}")
+
     train_idx, val_idx = next(splitter.split(np.zeros(len(dataset)), dataset.labels))
     num_workers = 0 if not multi_gpu else 2
     mean, std = compute_mean_std(
@@ -142,11 +161,26 @@ def main():
     )
 
     train_dataset = Subset(
-        get_dataset(args.dataset, DATA_PATH, transform=train_transform), train_idx
+        get_dataset(
+            args.dataset,
+            DATA_PATH,
+            transform=train_transform,
+            metadata_path=dataset.metadata_path,
+        ),
+        train_idx,
     )
     val_dataset = Subset(
-        get_dataset(args.dataset, DATA_PATH, transform=val_transform), val_idx
+        get_dataset(
+            args.dataset,
+            DATA_PATH,
+            transform=val_transform,
+            metadata_path=dataset.metadata_path,
+        ),
+        val_idx,
     )
+
+    print(f"Len of train: {len(train_dataset)}")
+    print(f"Len of validation: {len(val_dataset)}")
 
     loaders = {}
     loaders["train"] = torch.utils.data.DataLoader(
@@ -176,7 +210,10 @@ def main():
         routing_algorithm="sigmoid",
     )
 
-    callbacks = [PlotCallback(), ReconstructionCallback(frequency=1)]
+    callbacks = [
+        PlotCallback(),
+        ReconstructionCallback(frequency=5, mean=mean, std=std),
+    ]
     callback_manager = CallbackManager(callbacks)
 
     caps_net.run(epochs, classes, callback_manager=callback_manager)
