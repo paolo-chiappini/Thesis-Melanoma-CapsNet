@@ -37,6 +37,7 @@ class PH2Dataset(BaseDataset):
             "color_blue_gray_brown",
             "color_black",
         ]
+        self.labels = self.data[self.label]
 
     def __getitem__(self, index):
         record = self.data.iloc[index]
@@ -55,7 +56,8 @@ class PH2Dataset(BaseDataset):
         if self.transform:
             image = self.transform(image)
 
+        label = torch.tensor(label, dtype=torch.int)
         visual_features = record[self.visual_attributes].values.astype(float)
-        visual_features = torch.tensor(visual_features, dtype=torch.float32)
+        visual_features = torch.tensor(visual_features, dtype=torch.float)
 
         return image, label, visual_features

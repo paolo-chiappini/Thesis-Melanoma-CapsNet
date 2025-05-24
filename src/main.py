@@ -1,13 +1,32 @@
 import os
 import sys
 import torch
-from torchvision import transforms
+from torchvision import transforms as T
+from torch.utils.data import Subset
 from trainers import trainer_conv_custom, trainer_with_attributes
 import argparse
 from utils.loaders import get_dataset
 from utils.callbacks import PlotCallback, ReconstructionCallback, CallbackManager
+import random
+import numpy as np
+from sklearn.model_selection import StratifiedShuffleSplit
+from utils.datasets import compute_mean_std
+
+
+def set_seed(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+random_state = 123
+set_seed(random_state)
 
 trainer = trainer_with_attributes
+splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=random_state)
 
 multi_gpu = False
 # Try CUDA
@@ -70,15 +89,11 @@ if args.cpu:
     multi_gpu = False
 
 size = 284  # 284 for conv encoder form Perér et al.
-transform = transforms.Compose(
-    [
-        transforms.Resize((size, size)),
-        transforms.ToTensor(),
-    ]
-)
+
+tensor_transform = T.Compose([T.Resize((500, 500)), T.ToTensor()])
 
 # switch between datasets
-dataset = get_dataset(args.dataset, DATA_PATH, transform=transform)
+dataset = get_dataset(args.dataset, DATA_PATH, transform=tensor_transform)
 if dataset is None:
     print(f"Dataset not found: {args.dataset}")
     exit()
@@ -95,20 +110,58 @@ if torch.cuda.is_available() and torch.cuda.device_count() > 1:
 
 
 def main():
+    train_idx, val_idx = next(splitter.split(np.zeros(len(dataset)), dataset.labels))
+    num_workers = 0 if not multi_gpu else 2
+    mean, std = compute_mean_std(
+        dataset=Subset(dataset, train_idx), num_workers=num_workers
+    )
+
+    train_transform = T.Compose(
+        [
+            T.RandomResizedCrop(size),  # Random crop and resize
+            T.RandomHorizontalFlip(),  # Horizontal flip
+            T.RandomVerticalFlip(),  # Vertical flip
+            T.RandomRotation(degrees=30),  # Random rotation
+            # T.ColorJitter(        # Color changes may affect performance
+            #     brightness=0.2,
+            #     contrast=0.2,
+            #     saturation=0.2,
+            #     hue=0.1
+            # ),
+            T.ToTensor(),  # Convert to tensor
+            T.Normalize(mean=mean, std=std),  # Normalize
+        ]
+    )
+
+    val_transform = T.Compose(
+        [
+            T.Resize((size, size)),  # Resize to fixed size
+            T.ToTensor(),
+            T.Normalize(mean=mean, std=std),
+        ]
+    )
+
+    train_dataset = Subset(
+        get_dataset(args.dataset, DATA_PATH, transform=train_transform), train_idx
+    )
+    val_dataset = Subset(
+        get_dataset(args.dataset, DATA_PATH, transform=val_transform), val_idx
+    )
+
     loaders = {}
     loaders["train"] = torch.utils.data.DataLoader(
-        dataset,
+        train_dataset,
         batch_size,
         shuffle=True,
-        num_workers=(0 if not multi_gpu else 2),
+        num_workers=num_workers,
         pin_memory=True,
     )
-    # TEMPORARY
+
     loaders["test"] = torch.utils.data.DataLoader(
-        dataset,
+        val_dataset,
         batch_size,
         shuffle=True,
-        num_workers=(0 if not multi_gpu else 2),
+        num_workers=num_workers,
         pin_memory=True,
     )
 

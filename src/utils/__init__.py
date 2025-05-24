@@ -12,6 +12,7 @@ from .layer_output_shape import (
     get_conv2d_output_shape,
     get_network_output_shape,
 )
+from .datasets.mean_std import compute_mean_std
 
 __all__ = [
     "get_dataset",
@@ -22,4 +23,5 @@ __all__ = [
     "get_maxpool2d_output_shape",
     "get_conv2d_output_shape",
     "get_network_output_shape",
+    "compute_mean_std",
 ]
