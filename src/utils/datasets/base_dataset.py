@@ -10,10 +10,10 @@ class BaseDataset(Dataset):
         root,
         metadata_path,
         image_path,
+        image_extension,
         transform=None,
         image_id="image",
         label="target",
-        image_extension="jpg",
     ):
         self.root = root
         self.metadata_path = metadata_path
@@ -22,6 +22,8 @@ class BaseDataset(Dataset):
         self.image_id = image_id
         self.label = label
         self.image_extension = image_extension
+
+        assert image_extension is not None, "Image extension must not be None"
 
         self.data = self.load_metadata()
 
@@ -47,16 +49,14 @@ class BaseDataset(Dataset):
 
         return image, label
 
-    def check_missing_files(self):
+    def check_missing_files(self, full_image_path, image_col):
         missing = 0
         for _, row in self.data.iterrows():
-            image_id = row["image_name"]
+            image_id = row[image_col]
             image_path = os.path.join(
                 self.root,
-                self.image_path,
-                image_id,
-                f"{image_id}_Dermoscopic_Image",
-                f"{image_id}.bmp",
+                full_image_path(image_id),
+                f"{image_id}.{self.image_extension}",
             )
             if not os.path.exists(image_path):
                 print(f"Missing: {image_path}")

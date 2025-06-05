@@ -13,6 +13,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from utils.datasets import compute_mean_std
 from collections import Counter
 from tqdm import tqdm
+from models.model_conv_attributes_32 import CapsuleNetworkWithAttributes32
 
 
 def set_seed(seed):
@@ -78,8 +79,8 @@ parser.add_argument("--meta", help="Metadata filename for the dataset", default=
 parser.add_argument(
     "--dataset",
     default="PH2",
-    choices=["PH2", "ISIC"],
-    help="Dataset to use: PH2 or ISIC",
+    choices=["PH2", "EXHAM"],
+    help="Dataset to use: PH2, EXHAM",
 )
 parser.add_argument("--cpu", action="store_true", help="Use CPU for training")
 
@@ -96,12 +97,13 @@ if args.cpu:
     device = torch.device("cpu")
     multi_gpu = False
 
-size = 284  # 284 for conv encoder form Perér et al.
+# size = 284  # 284 for conv encoder form Perér et al.
+size = 282  # for 32x32 inputs in caps
 
 tensor_transform = T.Compose([T.Resize((500, 500)), T.ToTensor()])
 
 epochs = 50
-batch_size = 128
+batch_size = 32
 learning_rate = 1e-3
 routing_steps = 3
 lr_decay = 0.96
@@ -199,12 +201,25 @@ def main():
         pin_memory=True,
     )
 
+    network = CapsuleNetworkWithAttributes32(
+        img_shape=loaders["train"].dataset[0][0].numpy().shape,
+        channels=3,
+        primary_dim=8,
+        num_classes=2,
+        num_attributes=loaders["train"].dataset[0][2].shape[0],
+        output_dim=16,
+        routing_steps=routing_steps,
+        device=device,
+        routing_algorithm="sigmoid",
+    )
+
     caps_net = trainer.CapsNetTrainer(
         loaders,
         batch_size,
         learning_rate,
         routing_steps,
         lr_decay,
+        network=network,
         device=device,
         multi_gpu=multi_gpu,
         routing_algorithm="sigmoid",

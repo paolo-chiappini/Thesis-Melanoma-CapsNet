@@ -23,6 +23,7 @@ class CapsNetTrainer:
         learning_rate,
         routing_steps=3,
         lr_decay=0.9,
+        network=None,
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         multi_gpu=(torch.cuda.device_count() > 1),
         routing_algorithm="softmax",
@@ -33,17 +34,8 @@ class CapsNetTrainer:
         self.loaders = loaders
         img_shape = self.loaders["train"].dataset[0][0].numpy().shape
 
-        self.network = CapsuleNetworkWithAttributes(
-            img_shape,
-            channels=3,
-            primary_dim=8,
-            num_classes=2,
-            num_attributes=self.loaders["train"].dataset[0][2].shape[0],
-            output_dim=16,
-            routing_steps=routing_steps,
-            device=self.device,
-            routing_algorithm=routing_algorithm,
-        ).to(self.device)
+        assert network is not None, "Network architecture must be defined"
+        self.network = network.to(self.device)
 
         from torchinfo import summary
 

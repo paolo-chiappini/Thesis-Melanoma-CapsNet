@@ -5,27 +5,27 @@ from PIL import Image
 from .augmentations import augment_dataset
 
 
-class PH2Dataset(BaseDataset):
+class EXHAMDataset(BaseDataset):
     def __init__(
         self,
         root,
         image_extension,
         metadata_path=None,
         transform=None,
-        image_id="image_name",
-        label="diagnosis_melanoma",
+        image_id="image_id",
+        label="benign_malignant",
         augment=False,
     ):
-        image_extension = image_extension if image_extension is not None else "bmp"
+        image_extension = image_extension if image_extension is not None else "jpg"
 
         super().__init__(
             root,
             (
                 metadata_path
                 if metadata_path is not None
-                else "PH2_dataset_preprocessed.csv"
+                else "Datasets/metadata/metadata_ground_truth.csv"
             ),
-            image_path="PH2_Dataset",
+            image_path="images",
             transform=transform,
             image_id=image_id,
             label=label,
@@ -33,19 +33,25 @@ class PH2Dataset(BaseDataset):
         )
 
         self.visual_attributes = [
-            "asymmetry_asymmetric",
-            "asymmetry_symmetric_1_axis",
-            "pigment_network",
-            "dots_globules",
-            "streaks",
-            "regression_areas",
-            "blue_whitish_veil",
-            "color_white",
-            "color_red",
-            "color_light_brown",
-            "color_dark_brown",
-            "color_blue_gray_brown",
-            "color_black",
+            "APC",
+            "BDG",
+            "ESA",
+            "GP",
+            "MS",
+            "MVP",
+            "None",
+            "OPC",
+            "PDES",
+            "PES",
+            "PIF",
+            "PLF",
+            "PLR",
+            "PRL",
+            "PRLC",
+            "PV",
+            "SPC",
+            "TRBL",
+            "WLSA",
         ]
         self.labels = self.data[self.label]
 
@@ -54,7 +60,7 @@ class PH2Dataset(BaseDataset):
             self.load_metadata()  # Force metadata reload
             self.labels = self.data[self.label]
 
-        print("[PH2] Loaded dataset with", len(self.data), "rows")
+        print("[EXHAM] Loaded dataset with", len(self.data), "rows")
 
     def __getitem__(self, index):
         if index >= len(self.data):
@@ -69,8 +75,6 @@ class PH2Dataset(BaseDataset):
         image_path = os.path.join(
             self.root,
             self.image_path,
-            image_id,
-            image_id + "_Dermoscopic_Image",
             image_id + "." + self.image_extension,
         )
         image = Image.open(image_path).convert("RGB")
@@ -85,11 +89,6 @@ class PH2Dataset(BaseDataset):
         return image, label, visual_features
 
     def check_missing_files(self):
-        full_image_path = lambda image_id: os.path.join(
-            self.image_path, image_id, image_id + "_Dermoscopic_Image"
-        )
+        full_image_path = lambda _: self.image_path
 
-        super().check_missing_files(
-            full_image_path,
-            "image_name",
-        )
+        super().check_missing_files(full_image_path, "image_id")

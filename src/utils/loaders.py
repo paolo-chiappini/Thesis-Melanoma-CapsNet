@@ -1,7 +1,9 @@
 from .datasets.ph2_dataset.ph2_loader import PH2Dataset
+from .datasets.exham_dataset.exham_loader import EXHAMDataset
 
 DATASET_REGISTRY = {
     "PH2": PH2Dataset,
+    "EXHAM": EXHAMDataset,
     # Add other datasets here
 }
 
@@ -11,7 +13,7 @@ def get_dataset(
     root,
     metadata_path=None,
     transform=None,
-    image_extension="bmp",
+    image_extension=None,
     augment=False,
 ):
     """
