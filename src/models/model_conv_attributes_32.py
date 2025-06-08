@@ -111,4 +111,4 @@ class CapsuleNetworkWithAttributes32(nn.Module):
         reconstructions = self.decoder((out * y).view(out.size(0), -1))
         reconstructions = reconstructions.view(-1, *self.img_shape)
 
-        return preds, reconstructions, malignancy_scores
+        return preds, reconstructions, malignancy_scores, out
