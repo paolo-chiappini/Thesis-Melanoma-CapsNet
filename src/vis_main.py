@@ -13,7 +13,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from collections import Counter
 from tqdm import tqdm
 from models.model_conv_attributes_32 import CapsuleNetworkWithAttributes32
-from utils.visualization.capsule_contribution import visualize_capsule_contribution
+from utils.visualization.capsule_contribution import perturb_all_capsules
 
 
 def set_seed(seed):
@@ -153,10 +153,34 @@ def main():
         routing_algorithm="sigmoid",
     )
 
+    class_0_images = []
+    class_1_images = []
+
+    for images, labels, _, _ in loaders["test"]:
+        for img, label in zip(images, labels):
+            if label.item() == 0 and len(class_0_images) < 3:
+                class_0_images.append(img)
+            elif label.item() == 1 and len(class_1_images) < 3:
+                class_1_images.append(img)
+
+            if len(class_0_images) == 3 and len(class_1_images) == 3:
+                break
+        if len(class_0_images) == 3 and len(class_1_images) == 3:
+            break
+
+    class_0_images = torch.stack(class_0_images)
+    class_1_images = torch.stack(class_1_images)
+
+    all_images = torch.cat([class_0_images, class_1_images], dim=0)
+
     network.load_state_dict(torch.load(args.model, weights_only=False))
-    for idx in range(num_attributes):
-        visualize_capsule_contribution(
-            network, loaders["test"].dataset[300][0], idx, device=device
+    for i, image in enumerate(all_images):
+        perturb_all_capsules(
+            network,
+            image,
+            device=device,
+            visual_attributes=dataset.visual_attributes,
+            out_prefix=f"img{i}_label{0 if i < 3 else 1}",
         )
 
 
