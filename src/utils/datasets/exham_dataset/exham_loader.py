@@ -15,6 +15,7 @@ class EXHAMDataset(BaseDataset):
         image_id="image_id",
         label="benign_malignant",
         augment=False,
+        load_segmentations=True,
     ):
         image_extension = image_extension if image_extension is not None else "jpg"
 
@@ -60,6 +61,10 @@ class EXHAMDataset(BaseDataset):
             self.load_metadata()  # Force metadata reload
             self.labels = self.data[self.label]
 
+        self.load_segmentations = load_segmentations
+        self.segmentations_path = "segmentations"
+        self.segmentation_extension = "png"
+
         print("[EXHAM] Loaded dataset with", len(self.data), "rows")
 
     def __getitem__(self, index):
@@ -77,16 +82,34 @@ class EXHAMDataset(BaseDataset):
             self.image_path,
             image_id + "." + self.image_extension,
         )
+
+        segmentation_path = os.path.join(
+            self.root,
+            self.segmentations_path,
+            image_id + "_segmentation." + self.segmentation_extension,
+        )
+
+        image_path = os.path.normpath(image_path)
+        segmentation_path = os.path.normpath(segmentation_path)
+
         image = Image.open(image_path).convert("RGB")
+        segmentation = (
+            Image.open(segmentation_path).convert("L")
+            if self.load_segmentations
+            else None
+        )
 
         if self.transform:
             image = self.transform(image)
+            segmentation = (
+                self.transform(segmentation) if segmentation is not None else None
+            )
 
         label = torch.tensor(label, dtype=torch.int)
         visual_features = record[self.visual_attributes].values.astype(float)
         visual_features = torch.tensor(visual_features, dtype=torch.float)
 
-        return image, label, visual_features
+        return (image, label, visual_features, segmentation)
 
     def check_missing_files(self):
         full_image_path = lambda _: self.image_path

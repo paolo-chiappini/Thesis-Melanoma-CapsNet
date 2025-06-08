@@ -43,9 +43,9 @@ class CapsuleLoss(nn.Module):
         self.reconstruction_loss = nn.MSELoss(size_average=size_average)
         self.reconstruction_loss_scale = reconstruction_loss_scale
 
-    def forward(self, inputs, labels, images, reconstructions):
+    def forward(self, inputs, labels, images, reconstructions, masks):
         margin_loss = self.margin_loss(inputs, labels)
-        reconstruction_loss = self.reconstruction_loss(reconstructions, images)
+        reconstruction_loss = self.reconstruction_loss(reconstructions, images * masks)
         caps_loss = margin_loss + self.reconstruction_loss_scale * reconstruction_loss
 
         return caps_loss
@@ -106,8 +106,8 @@ class SegmentationLoss(nn.Module):
 class MaskedReconstructionLoss(nn.Module):
     def __init__(
         self,
-        loss_lamdba=0.5,
-        background_lambda=0.2,
+        loss_lamdba=1.0,
+        background_lambda=0.0,
         reconstruction_loss_scale=1e-4,
         size_average=False,
     ):
@@ -130,11 +130,16 @@ class MaskedReconstructionLoss(nn.Module):
         Returns:
         - loss: Computed loss value
         """
-        masked_loss = self.reconstruction_loss(reconstructions * masks, inputs * masks)
-        background_loss = self.reconstruction_loss(
-            reconstructions * (1 - masks), inputs * (1 - masks)
-        )
-        return self.loss_lambda(masked_loss + background_loss * self.background_lambda)
+        # masked_loss = self.reconstruction_loss(reconstructions * masks, inputs * masks)
+        masked_loss = self.reconstruction_loss(
+            reconstructions, inputs * masks
+        )  # Only inputs are masked to favor automatic segmentation.
+
+        # background_loss = self.reconstruction_loss(
+        #     reconstructions * (1 - masks), inputs * (1 - masks)
+        # )
+        # return self.loss_lambda(masked_loss + background_loss * self.background_lambda)
+        return self.loss_lambda * masked_loss
 
 
 class MalignancyLoss(nn.Module):
@@ -171,7 +176,7 @@ class CombinedLoss(nn.Module):
         super(CombinedLoss, self).__init__()
         self.capsule_loss = CapsuleLoss(
             loss_lambda=margin_loss_lambda,
-            recontruction_loss_scale=reconstruction_loss_scale,
+            reconstruction_loss_scale=reconstruction_loss_scale,
         )
         self.attribute_loss = AttributeLoss(loss_lambda=attribute_loss_lambda)
         self.malignancy_loss = MalignancyLoss(loss_lambda=malignancy_loss_lambda)
@@ -185,20 +190,13 @@ class CombinedLoss(nn.Module):
         targets,
         images,
         reconstructions,
-        segmentations=None,
-        segmentations_targets=None,
+        masks,
     ):
         capsule_loss = self.capsule_loss(
-            malignancy_scores, targets, images, reconstructions
+            malignancy_scores, targets, images, reconstructions, masks
         )
         attribute_loss = self.attribute_loss(capsule_outputs, attribute_targets)
         # malignancy_loss = self.malignancy_loss # Not implemented
 
-        segmentation_loss = 0
-        if segmentations is not None and segmentations_targets is not None:
-            segmentation_loss = self.segmentaion_loss(
-                segmentations, segmentations_targets
-            )
-
-        total_loss = capsule_loss + attribute_loss + segmentation_loss
+        total_loss = capsule_loss + attribute_loss
         return total_loss

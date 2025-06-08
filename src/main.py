@@ -139,18 +139,19 @@ def main():
 
     train_transform = T.Compose(
         [
-            T.RandomResizedCrop(size),  # Random crop and resize
-            T.RandomHorizontalFlip(),  # Horizontal flip
-            T.RandomVerticalFlip(),  # Vertical flip
-            T.RandomRotation(degrees=30),  # Random rotation
+            # T.RandomResizedCrop(size),  # Random crop and resize
+            # T.RandomHorizontalFlip(),  # Horizontal flip
+            # T.RandomVerticalFlip(),  # Vertical flip
+            # T.RandomRotation(degrees=30),  # Random rotation
             # T.ColorJitter(        # Color changes may affect performance
             #     brightness=0.2,
             #     contrast=0.2,
             #     saturation=0.2,
             #     hue=0.1
             # ),
+            T.Resize((size, size)),
             T.ToTensor(),  # Convert to tensor
-            T.Normalize(mean=mean, std=std),  # Normalize
+            # T.Normalize(mean=mean, std=std),  # Normalize
         ]
     )
 
@@ -158,7 +159,7 @@ def main():
         [
             T.Resize((size, size)),  # Resize to fixed size
             T.ToTensor(),
-            T.Normalize(mean=mean, std=std),
+            # T.Normalize(mean=mean, std=std),
         ]
     )
 
@@ -227,7 +228,8 @@ def main():
 
     callbacks = [
         PlotCallback(),
-        ReconstructionCallback(frequency=5, mean=mean, std=std),
+        # ReconstructionCallback(frequency=5, mean=mean, std=std),
+        ReconstructionCallback(frequency=3),
     ]
     callback_manager = CallbackManager(callbacks)
 

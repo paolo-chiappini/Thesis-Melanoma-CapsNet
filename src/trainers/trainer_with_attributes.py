@@ -82,11 +82,15 @@ class CapsNetTrainer:
                 running_loss = 0.0
                 correct = 0
                 total = 0
-                for i, (images, labels, visual_attributes) in enumerate(
+                for i, (images, labels, visual_attributes, masks) in enumerate(
                     self.loaders[phase]
                 ):
                     t1 = time()
-                    images, labels = images.to(self.device), labels.to(self.device)
+                    images, labels, masks = (
+                        images.to(self.device),
+                        labels.to(self.device),
+                        masks.to(self.device),
+                    )
                     labels = eye[labels]  # one-hot encoding
 
                     self.optimizer.zero_grad()
@@ -99,6 +103,7 @@ class CapsNetTrainer:
                         labels,
                         images,
                         reconstructions,
+                        masks,
                     )
 
                     if phase == "train":
@@ -165,11 +170,12 @@ class CapsNetTrainer:
 
         class_correct = list(0.0 for _ in classes)
         class_total = list(0.0 for _ in classes)
-        for images, labels, visual_attributes in self.loaders["test"]:
-            images, labels, visual_attributes = (
+        for images, labels, visual_attributes, masks in self.loaders["test"]:
+            images, labels, visual_attributes, masks = (
                 images.to(self.device),
                 labels.to(self.device),
                 visual_attributes.to(self.device),
+                masks.to(self.device),
             )
 
             outputs, reconstructions, malignancy_scores = self.network(images)
