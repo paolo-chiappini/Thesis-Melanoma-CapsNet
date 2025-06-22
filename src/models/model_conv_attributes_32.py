@@ -1,6 +1,12 @@
 import torch
 import torch.nn as nn
-from layers import Conv2d_BN, PrimaryCapsules, RoutingCapsules, MalignancyPredictor
+from layers import (
+    Conv2d_BN,
+    PrimaryCapsules,
+    RoutingCapsules,
+    MalignancyPredictor,
+    ConvDecoder,
+)
 from numpy import prod
 from utils.layer_output_shape import get_network_output_shape
 
@@ -84,15 +90,17 @@ class CapsuleNetworkWithAttributes32(nn.Module):
         )
 
         # Decoder
-        decoder_layers = [
-            nn.Linear(output_dim * num_attributes, 512),
-            nn.ReLU(inplace=True),
-            nn.Linear(512, 1024),
-            nn.ReLU(inplace=True),
-            nn.Linear(1024, int(prod(img_shape))),
-            nn.Sigmoid(),
-        ]
-        self.decoder = nn.Sequential(*decoder_layers)
+        # decoder_layers = [
+        #     nn.Linear(output_dim * num_attributes, 512),
+        #     nn.ReLU(inplace=True),
+        #     nn.Linear(512, 1024),
+        #     nn.ReLU(inplace=True),
+        #     nn.Linear(1024, int(prod(img_shape))),
+        #     nn.Sigmoid(),
+        # ]
+        # self.decoder = nn.Sequential(*decoder_layers)
+
+        self.decoder = ConvDecoder(output_dim * num_attributes, self.img_shape)
 
     def forward(self, x):
         for layer in self.encoder:
