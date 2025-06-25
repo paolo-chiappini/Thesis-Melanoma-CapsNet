@@ -37,12 +37,14 @@ class ConvDecoder(nn.Module):
             ),  # 72x72 => 144x144
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(
-                16, 8, kernel_size=4, stride=2, padding=1
+                16, 16, kernel_size=4, stride=2, padding=1
             ),  # 144x144 => 288x288
             nn.ReLU(inplace=True),
+            nn.Conv2d(16, 8, kernel_size=5, stride=1, padding=0),  # 288x288 => 284x284
+            nn.ReLU(inplace=True),
             nn.Conv2d(
-                8, self.img_channels, kernel_size=3, stride=1, padding=3
-            ),  # 288x288 => 282x282
+                8, self.img_channels, kernel_size=3, stride=1, padding=0
+            ),  # 284x284 => 282x282
             nn.Sigmoid(),  # [0, 1] range
         )
 
@@ -51,6 +53,4 @@ class ConvDecoder(nn.Module):
         # reshape for convolution
         x = x.view(-1, self.fmap_channels, self.fmap_height, self.fmap_width)
         x = self.decoder(x)
-        # ensure image size
-        x = x[..., : self.img_height, self.img_width]
         return x
