@@ -6,11 +6,16 @@ from tqdm import tqdm
 
 
 def train_autoencoder(
-    model, dataloader, num_epochs=50, lr=1e-4, device="cuda", callback_manager=None
+    model,
+    dataloader,
+    num_epochs=50,
+    lr=1e-4,
+    criterion=nn.MSELoss(),
+    device="cuda",
+    callback_manager=None,
 ):
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    criterion = nn.MSELoss()
 
     model.train()
     for epoch in range(num_epochs):

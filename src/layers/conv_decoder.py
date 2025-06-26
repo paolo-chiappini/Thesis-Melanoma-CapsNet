@@ -20,31 +20,21 @@ class ConvDecoder(nn.Module):
         )
 
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(
-                128, 128, kernel_size=4, stride=2, padding=1
-            ),  # 9x9 => 18x18
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),  # 8 -> 16
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(
-                128, 64, kernel_size=4, stride=2, padding=1
-            ),  # 18x18 => 36x36
+                256, 128, kernel_size=4, stride=2, padding=1
+            ),  # 16 -> 32
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(
-                64, 32, kernel_size=4, stride=2, padding=1
-            ),  # 36x36 => 72x72
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),  # 32 -> 64
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(
-                32, 16, kernel_size=4, stride=2, padding=1
-            ),  # 72x72 => 144x144
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),  # 64 -> 128
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(
-                16, 16, kernel_size=4, stride=2, padding=1
-            ),  # 144x144 => 288x288
-            nn.ReLU(inplace=True),
-            nn.Conv2d(16, 8, kernel_size=5, stride=1, padding=0),  # 288x288 => 284x284
+            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1),  # 64 -> 128
             nn.ReLU(inplace=True),
             nn.Conv2d(
-                8, self.img_channels, kernel_size=3, stride=1, padding=0
-            ),  # 284x284 => 282x282
+                16, self.img_channels, kernel_size=3, stride=1, padding=1
+            ),  # 128 -> 128
             nn.Sigmoid(),  # [0, 1] range
         )
 

@@ -10,6 +10,7 @@ from collections import Counter
 from trainers import trainer_autoencoder
 from utils.callbacks import PlotCallback, ReconstructionCallback, CallbackManager
 from models.autoencoder import ConvAutoencoder
+from utils.losses.ae_losses import AECompositeLoss
 
 
 def set_seed(seed):
@@ -92,8 +93,8 @@ if args.cpu:
     multi_gpu = False
 
 # size = 284  # 284 for conv encoder form Perér et al.
-size = 282  # for 32x32 inputs in caps
-epochs = 50
+size = 256
+epochs = 75
 batch_size = 32
 learning_rate = 1e-3
 classes = range(2)  # Benign 0, Malignant 1
@@ -142,6 +143,8 @@ def main():
     trainer_autoencoder.train_autoencoder(
         model=autoencoder,
         dataloader=loader,
+        num_epochs=epochs,
+        criterion=AECompositeLoss().to(device=device),
         device=device,
         callback_manager=callback_manager,
     )

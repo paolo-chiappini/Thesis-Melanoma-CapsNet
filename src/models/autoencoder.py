@@ -4,7 +4,7 @@ from layers import ConvDecoder
 
 
 class ConvAutoencoder(nn.Module):
-    def __init__(self, image_shape=(3, 282, 282), latent_dim=256):
+    def __init__(self, image_shape=(3, 282, 282), latent_dim=1024):
         super().__init__()
         self.latent_dim = latent_dim
         self.image_shape = image_shape
@@ -13,27 +13,28 @@ class ConvAutoencoder(nn.Module):
         # --- ENCODER ---
         self.encoder = nn.Sequential(
             nn.Conv2d(
-                self.image_channels, 8, kernel_size=4, stride=2, padding=1
-            ),  # 282 -> 141
+                self.image_channels, 16, kernel_size=3, stride=2, padding=1
+            ),  # 256 -> 128
             nn.ReLU(inplace=True),
-            nn.Conv2d(8, 16, kernel_size=4, stride=2, padding=1),  # 141 -> 70
+            nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1),  # 128 -> 64
             nn.ReLU(inplace=True),
-            nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=1),  # 70 -> 35
+            nn.Conv2d(32, 128, kernel_size=3, stride=2, padding=1),  # 64 -> 32
             nn.ReLU(inplace=True),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),  # 35 -> 17
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),  # 32 -> 16
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),  # 17 -> 8
+            nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=1),  # 16 -> 8
             nn.ReLU(inplace=True),
         )
 
-        self.fc_enc = nn.Linear(128 * 8 * 8, latent_dim)
+        self.fc_enc = nn.Linear(512 * 8 * 8, latent_dim)
 
         # --- DECODER ---
         self.decoder = ConvDecoder(
             latent_dim=latent_dim,
             img_shape=self.image_shape,
-            fmap_height=9,
-            fmap_width=9,
+            fmap_channels=512,
+            fmap_height=8,
+            fmap_width=8,
         )
 
     def encode(self, x):
