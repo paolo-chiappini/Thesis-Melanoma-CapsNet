@@ -33,24 +33,46 @@ class EXHAMDataset(BaseDataset):
             image_extension=image_extension,
         )
 
+        # Feature importance Random Forest (available on Kaggle)
+        # TRBL	0.200910
+        # GP	0.168374
+        # MS	0.113095
+        # BDG	0.110860
+        # ESA	0.102919
+        # WLSA	0.090970
+        # APC	0.064269
+        # -------------------- threshold
+        # SPC	0.030327
+        # PV	0.029661
+        # PRL	0.027858
+        # OPC	0.018847
+        # None	0.016453
+        # PIF	0.012541
+        # PRLC	0.004654
+        # PLR	0.003681
+        # PLF	0.002315
+        # PES	0.000885
+        # MVP	0.000823
+        # PDES	0.000556
+
         self.visual_attributes = [
             "APC",
             "BDG",
             "ESA",
             "GP",
             "MS",
-            "MVP",
-            "None",
-            "OPC",
-            "PDES",
-            "PES",
-            "PIF",
-            "PLF",
-            "PLR",
-            "PRL",
-            "PRLC",
-            "PV",
-            "SPC",
+            # "MVP",
+            # "None",
+            # "OPC",
+            # "PDES",
+            # "PES",
+            # "PIF",
+            # "PLF",
+            # "PLR",
+            # "PRL",
+            # "PRLC",
+            # "PV",
+            # "SPC",
             "TRBL",
             "WLSA",
         ]
