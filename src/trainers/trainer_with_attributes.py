@@ -80,9 +80,12 @@ class CapsNetTrainer:
                 running_loss = 0.0
                 correct = 0
                 total = 0
-                for i, (images, labels, visual_attributes, masks) in enumerate(
-                    self.loaders[phase]
-                ):
+                loader = tqdm(
+                    enumerate(self.loaders[phase]),
+                    total=len(self.loaders[phase]),
+                    desc=f"{phase.capitalize()} Epoch {epoch}",
+                )
+                for i, (images, labels, visual_attributes, masks) in loader:
                     t1 = time()
                     images, labels, masks = (
                         images.to(self.device),
@@ -121,9 +124,8 @@ class CapsNetTrainer:
                     accuracy = float(correct) / float(total)
 
                     if phase == "train":
-                        print(
-                            f"Epoch {epoch}, Batch {i+1}, Loss {running_loss/(i+1)}",
-                            f"Accuracy {accuracy} Time {round(time()-t1, 3)}s",
+                        loader.set_postfix(
+                            loss=running_loss / (i + 1), accuracy=accuracy
                         )
 
                         if callback_manager is not None:
