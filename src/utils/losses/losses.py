@@ -107,6 +107,8 @@ class AttributeLoss(nn.Module):
         Returns:
         - loss: Computed loss value
         """
+        device = attribute_scores.device
+        attribute_targets = attribute_targets.to(device)
         return self.loss_lambda * self.loss_criterion(
             attribute_scores, attribute_targets
         )

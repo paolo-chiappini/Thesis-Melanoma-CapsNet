@@ -28,7 +28,7 @@ class BaseDataset(Dataset):
         self.data = self.load_metadata()
 
     def load_metadata(self):
-        df = pd.read_csv(os.path.join(self.root, self.metadata_path))
+        df = pd.read_csv(os.path.normpath(os.path.join(self.root, self.metadata_path)))
         return df
 
     def __len__(self):

@@ -180,7 +180,7 @@ class CapsNetTrainer:
                 masks.to(self.device),
             )
 
-            outputs, reconstructions, malignancy_scores = self.network(images)
+            outputs, reconstructions, malignancy_scores, _ = self.network(images)
             _, predicted = torch.max(malignancy_scores, 1)
             c = (predicted == labels).squeeze()
             for i in range(labels.size(0)):
