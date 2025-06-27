@@ -183,7 +183,7 @@ data
 checkpoints
 
 # logs and output plots
-logs
-plots
-reconstructions
-perturbations
+logs/*
+plots/*
+reconstructions/*
+perturbations/*

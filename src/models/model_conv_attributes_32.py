@@ -38,12 +38,12 @@ class CapsuleNetworkWithAttributes32(nn.Module):
 
         # Encoder
         encoder_layers = [
-            Conv2d_BN(channels, 32, kernel_size, stride=2, padding="valid"),
-            Conv2d_BN(32, 64, kernel_size, padding="valid"),
+            Conv2d_BN(channels, 32, kernel_size, stride=2, padding=1),
+            Conv2d_BN(32, 64, kernel_size, padding=1),
             Conv2d_BN(64, 128, kernel_size),
             nn.MaxPool2d(kernel_size=kernel_size, stride=2),
-            Conv2d_BN(128, 192, kernel_size=1, padding="valid"),
-            Conv2d_BN(192, caps_channels, kernel_size, padding="valid"),
+            Conv2d_BN(128, 192, kernel_size=1, padding=1),
+            Conv2d_BN(192, caps_channels, kernel_size, padding=1),
             nn.MaxPool2d(kernel_size=kernel_size, stride=2),
         ]
         self.encoder = nn.Sequential(*encoder_layers)
@@ -100,7 +100,31 @@ class CapsuleNetworkWithAttributes32(nn.Module):
         # ]
         # self.decoder = nn.Sequential(*decoder_layers)
 
-        self.decoder = ConvDecoder(output_dim * num_attributes, self.img_shape)
+        self.decoder_layers = [
+            nn.ConvTranspose2d(256, 256, kernel_size=7, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(32, channels, kernel_size=4, stride=2, padding=1),
+            nn.Sigmoid(),
+        ]
+        self.decoder = ConvDecoder(
+            output_dim * num_attributes,
+            self.img_shape,
+            fmap_channels=256,
+            fmap_height=12,
+            fmap_width=12,
+            layers=self.decoder_layers,
+        )
+        encoder_output_shape = get_network_output_shape(
+            capsules_output_shape,
+            self.decoder_layers,
+            print_all=True,
+        )
 
     def forward(self, x):
         for layer in self.encoder:

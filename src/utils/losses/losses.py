@@ -24,9 +24,45 @@ class MarginLoss(nn.Module):
         return L_k.mean() if self.size_average else L_k.sum()
 
 
+class WeightedMarginLoss(nn.Module):
+    def __init__(
+        self, class_weights=None, gamma=2.0, size_average=False, loss_lambda=0.5
+    ):
+        super(WeightedMarginLoss, self).__init__()
+        self.class_weights = class_weights
+        self.gamma = gamma
+        self.size_average = size_average
+        self.m_plus = 0.9
+        self.m_minus = 0.1
+        self.loss_lambda = loss_lambda
+
+    def forward(self, inputs, labels):
+        L_k = (
+            labels * F.relu(self.m_plus - inputs) ** 2
+            + self.loss_lambda * (1 - labels) * F.relu(inputs - self.m_minus) ** 2
+        )
+
+        # Focal modulation to emphasize imbalanced classes
+        if self.gamma > 0:
+            pt = inputs * labels + (1 - inputs) * (1 - labels)
+            mod_factor = (1 - pt).pow(self.gamma)
+            L_k *= mod_factor
+
+        if self.class_weights is not None:
+            class_weights = self.class_weights
+            L_k *= class_weights.unsqueeze(0)
+
+        return L_k.mean() if self.size_average else L_k.sum()
+
+
 class CapsuleLoss(nn.Module):
     def __init__(
-        self, loss_lambda=0.5, reconstruction_loss_scale=5e-4, size_average=False
+        self,
+        loss_lambda=0.5,
+        reconstruction_loss_scale=5e-4,
+        size_average=False,
+        focal_gamma=2.0,
+        class_weights=None,
     ):
         """
         Combined loss: L_margin + L_reconstruction (SSE was used as reconstruction)
@@ -37,8 +73,11 @@ class CapsuleLoss(nn.Module):
         """
         super(CapsuleLoss, self).__init__()
         self.size_average = size_average
-        self.margin_loss = MarginLoss(
-            size_average=size_average, loss_lambda=loss_lambda
+        self.margin_loss = WeightedMarginLoss(
+            class_weights=class_weights,
+            gamma=focal_gamma,
+            size_average=size_average,
+            loss_lambda=loss_lambda,
         )
         self.reconstruction_loss = nn.MSELoss(size_average=size_average)
         self.reconstruction_loss_scale = reconstruction_loss_scale
@@ -167,7 +206,9 @@ class MalignancyLoss(nn.Module):
 class CombinedLoss(nn.Module):
     def __init__(
         self,
+        class_weights=None,
         margin_loss_lambda=0.4,
+        margin_loss_gamma=2.0,
         reconstruction_loss_scale=5e-4,
         attribute_loss_lambda=1.0,
         malignancy_loss_lambda=1.0,
@@ -177,6 +218,8 @@ class CombinedLoss(nn.Module):
         self.capsule_loss = CapsuleLoss(
             loss_lambda=margin_loss_lambda,
             reconstruction_loss_scale=reconstruction_loss_scale,
+            focal_gamma=margin_loss_gamma,
+            class_weights=class_weights,
         )
         self.attribute_loss = AttributeLoss(loss_lambda=attribute_loss_lambda)
         self.malignancy_loss = MalignancyLoss(loss_lambda=malignancy_loss_lambda)

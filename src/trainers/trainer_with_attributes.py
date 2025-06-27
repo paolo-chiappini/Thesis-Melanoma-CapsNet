@@ -4,11 +4,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import os
-from numpy import prod
 from datetime import datetime
 from time import time
-from models.model_conv_attributes import CapsuleNetworkWithAttributes
 from utils.losses.losses import CombinedLoss
+from tqdm import tqdm
 
 CHECKPOINTS_PATH = "checkpoints/"
 if not os.path.exists(CHECKPOINTS_PATH):
@@ -21,12 +20,11 @@ class CapsNetTrainer:
         loaders,
         batch_size,
         learning_rate,
-        routing_steps=3,
         lr_decay=0.9,
         network=None,
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         multi_gpu=(torch.cuda.device_count() > 1),
-        routing_algorithm="softmax",
+        criterion=CombinedLoss,
     ):
         self.device = device
         self.multi_gpu = multi_gpu
@@ -57,7 +55,7 @@ class CapsNetTrainer:
         if self.multi_gpu:
             self.network = nn.DataParallel(self.network)
 
-        self.loss_function = CombinedLoss()
+        self.loss_function = criterion
         self.optimizer = optim.Adam(self.network.parameters(), lr=learning_rate)
         self.scheduler = optim.lr_scheduler.ExponentialLR(
             self.optimizer, gamma=lr_decay
@@ -95,7 +93,9 @@ class CapsNetTrainer:
 
                     self.optimizer.zero_grad()
 
-                    outputs, reconstructions, malignancy_scores = self.network(images)
+                    outputs, reconstructions, malignancy_scores, _ = self.network(
+                        images
+                    )
                     loss = self.loss_function(
                         outputs,
                         visual_attributes,
