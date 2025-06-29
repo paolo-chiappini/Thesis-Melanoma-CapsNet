@@ -96,7 +96,7 @@ if args.cpu:
     multi_gpu = False
 
 # size = 284  # 284 for conv encoder form Perér et al.
-size = 282  # for 32x32 inputs in caps
+size = 256  # for 32x32 inputs in caps
 epochs = 50
 batch_size = 32
 learning_rate = 1e-3
@@ -174,13 +174,25 @@ def main():
     all_images = torch.cat([class_0_images, class_1_images], dim=0)
 
     network.load_state_dict(torch.load(args.model, weights_only=False))
+    # Generate local perturbations
+    # for i, image in enumerate(all_images):
+    #     perturb_all_capsules(
+    #         network.to(device),
+    #         image,
+    #         device=device,
+    #         visual_attributes=dataset.visual_attributes,
+    #         out_prefix=f"img{i}_label{0 if i < 3 else 1}",
+    #     )
+
+    # Generate global perturbations
     for i, image in enumerate(all_images):
         perturb_all_capsules(
-            network,
+            network.to(device),
             image,
             device=device,
             visual_attributes=dataset.visual_attributes,
-            out_prefix=f"img{i}_label{0 if i < 3 else 1}",
+            out_prefix=f"img{i}_global_label{0 if i < 3 else 1}",
+            global_perturbation=True
         )
 
 

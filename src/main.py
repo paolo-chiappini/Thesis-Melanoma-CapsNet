@@ -123,7 +123,7 @@ def main():
         routing_algorithm="sigmoid",
     )
 
-    loss_criterion = CombinedLoss(class_weights=class_weights)
+    loss_criterion = CombinedLoss(class_weights=class_weights, reconstruction_loss_scale=5e-2)
 
     caps_net = trainer.CapsNetTrainer(
         loaders,
