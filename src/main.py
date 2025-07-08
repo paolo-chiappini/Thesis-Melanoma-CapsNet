@@ -142,7 +142,12 @@ def main():
     ]
     callback_manager = CallbackManager(callbacks)
 
-    caps_net.run(epochs, classes, callback_manager=callback_manager)
+    caps_net.run(
+        epochs,
+        classes,
+        visual_attributes=dataset.visual_attributes,
+        callback_manager=callback_manager,
+    )
     print("=" * 10, "Run finished", "=" * 10)
 
 

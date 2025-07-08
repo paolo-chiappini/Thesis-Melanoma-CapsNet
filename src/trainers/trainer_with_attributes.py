@@ -64,7 +64,7 @@ class CapsNetTrainer:
     def __repr__(self):
         return repr(self.network)
 
-    def run(self, epochs, classes, callback_manager=None):
+    def run(self, epochs, classes, visual_attributes_all, callback_manager=None):
         print(8 * "=", "Run started".upper(), 8 * "=")
         eye = torch.eye(len(classes)).to(self.device)
 
@@ -85,7 +85,13 @@ class CapsNetTrainer:
                     total=len(self.loaders[phase]),
                     desc=f"{phase.capitalize()} Epoch {epoch}",
                 )
-                for i, (images, labels, visual_attributes, masks) in loader:
+                for i, batch in loader:
+                    images = batch[0]
+                    labels = batch[1]
+                    visual_attributes = batch[2]
+                    masks = batch[3]
+                    # va_masks = batch[4] # TODO: add back in trainig
+
                     t1 = time()
                     images, labels, masks = (
                         images.to(self.device),
@@ -172,7 +178,15 @@ class CapsNetTrainer:
 
         class_correct = list(0.0 for _ in classes)
         class_total = list(0.0 for _ in classes)
-        for images, labels, visual_attributes, masks in self.loaders["test"]:
+        attributes_correct = list(0.0 for _ in visual_attributes)
+        attributes_total = list(0.0 for _ in visual_attributes)
+        for batch in self.loaders["test"]:
+            images = batch[0]
+            labels = batch[1]
+            gt_visual_attributes = batch[2]
+            masks = batch[3]
+            # TODO: Add va masks
+
             images, labels, visual_attributes, masks = (
                 images.to(self.device),
                 labels.to(self.device),
@@ -180,7 +194,7 @@ class CapsNetTrainer:
                 masks.to(self.device),
             )
 
-            outputs, reconstructions, malignancy_scores = self.network(images)
+            outputs, reconstructions, malignancy_scores, _ = self.network(images)
             _, predicted = torch.max(malignancy_scores, 1)
             c = (predicted == labels).squeeze()
             for i in range(labels.size(0)):
@@ -188,8 +202,26 @@ class CapsNetTrainer:
                 class_correct[label] += c[i].item()
                 class_total[label] += 1
 
+            # Attribute accuracy
+            binarized_vas = (outputs > 0.5).float()
+            correct_vas = (binarized_vas == gt_visual_attributes).float()
+
+            for attr in range(gt_visual_attributes.size(1)):
+                attributes_correct[attr] += correct_vas[:, attr].sum().item()
+                attributes_total[attr] += gt_visual_attributes.size(0)
+
         for i in range(len(classes)):
             print(
                 "Accuracy of %5s : %2d %%"
                 % (classes[i], 100 * class_correct[i] / class_total[i])
+            )
+
+        for i in range(len(visual_attributes_all)):
+            acc = (
+                100 * attributes_correct[i] / attributes_total[i]
+                if attributes_total[i] > 0
+                else 0
+            )
+            print(
+                "Accuracy of attribute %5s : %2.2f%%" % (visual_attributes_all[i], acc)
             )

@@ -62,7 +62,7 @@ class EXHAMDataset(BaseDataset):
             "GP",
             "MS",
             # "MVP",
-            # "None",
+            "None",
             # "OPC",
             # "PDES",
             # "PES",
@@ -85,6 +85,7 @@ class EXHAMDataset(BaseDataset):
 
         self.load_segmentations = load_segmentations
         self.segmentations_path = "segmentations"
+        self.vas_masks_path = "va_masks"
         self.segmentation_extension = "png"
 
         print("[EXHAM] Loaded dataset with", len(self.data), "rows")
@@ -111,6 +112,15 @@ class EXHAMDataset(BaseDataset):
             image_id + "_segmentation." + self.segmentation_extension,
         )
 
+        va_masks_paths = [
+            os.path.join(
+                self.root,
+                self.vas_masks_path,
+                image_id + "_" + va + self.segmentation_extension,
+            )
+            for va in self.visual_attributes
+        ]
+
         image_path = os.path.normpath(image_path)
         segmentation_path = os.path.normpath(segmentation_path)
 
@@ -120,6 +130,19 @@ class EXHAMDataset(BaseDataset):
             if self.load_segmentations
             else None
         )
+
+        va_masks = {}
+        for path, va in zip(va_masks_paths, self.visual_attributes):
+            mask_image = None
+            if os.path.isfile(path):
+                mask_image = Image.open(va_masks_paths)
+                va_masks[va] = (
+                    self.transform(mask_image) if self.transform else mask_image
+                )
+            else:
+                va_masks[va] = torch.zeros_like(
+                    image
+                )  # create an all zero mask (complete absence of attributes)
 
         if self.transform:
             image = self.transform(image)
@@ -131,7 +154,7 @@ class EXHAMDataset(BaseDataset):
         visual_features = record[self.visual_attributes].values.astype(float)
         visual_features = torch.tensor(visual_features, dtype=torch.float)
 
-        return (image, label, visual_features, segmentation)
+        return (image, label, visual_features, segmentation, va_masks)
 
     def check_missing_files(self):
         full_image_path = lambda _: self.image_path
