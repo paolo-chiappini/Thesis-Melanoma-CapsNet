@@ -67,7 +67,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--data_root", default="data")
 parser.add_argument("--augment", action="store_true")
 parser.add_argument("--meta", default=None)
-parser.add_argument("--dataset", default="PH2", choices=["PH2", "EXHAM"])
+parser.add_argument("--dataset", default="PH2", choices=["PH2", "EXHAM", "ISIC"])
 parser.add_argument("--cpu", action="store_true", default=False)
 
 args = parser.parse_args()

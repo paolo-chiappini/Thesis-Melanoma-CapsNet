@@ -1,9 +1,11 @@
 from .datasets.ph2_dataset.ph2_loader import PH2Dataset
 from .datasets.exham_dataset.exham_loader import EXHAMDataset
+from .datasets.isic_dataset.isic_loader import ISICDataset
 
 DATASET_REGISTRY = {
     "PH2": PH2Dataset,
     "EXHAM": EXHAMDataset,
+    "ISIC": ISICDataset,
     # Add other datasets here
 }
 
