@@ -22,18 +22,13 @@ class CapsNetTrainer:
         learning_rate,
         lr_decay=0.9,
         network=None,
-        device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-        multi_gpu=(torch.cuda.device_count() > 1),
         criterion=CombinedLoss,
     ):
-        self.device = device
-        self.multi_gpu = multi_gpu
+        assert network is not None, "Network architecture must be defined"
+        self.device = network.device
 
         self.loaders = loaders
         img_shape = self.loaders["train"].dataset[0][0].numpy().shape
-
-        assert network is not None, "Network architecture must be defined"
-        self.network = network.to(self.device)
 
         from torchinfo import summary
 
@@ -51,9 +46,6 @@ class CapsNetTrainer:
                     "mult_adds",
                 ],
             )
-
-        if self.multi_gpu:
-            self.network = nn.DataParallel(self.network)
 
         self.loss_function = criterion
         self.optimizer = optim.Adam(self.network.parameters(), lr=learning_rate)

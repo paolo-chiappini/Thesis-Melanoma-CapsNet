@@ -1,0 +1,33 @@
+dataset:
+    name: EXHAM
+    root: ./data/EXHAMDataset
+    matadata_path: null
+    augment: False
+    batch_size: 16
+
+model:
+    name: CapsuleNetworkWithAttributes32
+    img_size: 256
+    channels: 3
+    primary_dim: 8
+    output_dim: 16
+    num_classes: 2
+    routing_steps: 3
+    routing_algorithm: sigmoid
+
+trainer:
+    name: TrainerWithAttributes
+    epochs: 50
+    learning_rate: 0.001
+    lr_decay: 0.96
+    loss:
+        name: CombinedLoss
+        reconstruction_loss_scale: 0.05
+
+callbacks:
+    - name: PlotCallback
+    - name: ReconstructionCallback
+      frequency: 3
+
+system:
+    seed: 123
