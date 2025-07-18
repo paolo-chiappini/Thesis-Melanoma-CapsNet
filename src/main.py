@@ -18,7 +18,9 @@ def set_seed(seed):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--task", required=True, choices=["train", "visualize"])
+    parser.add_argument(
+        "--task", required=True, choices=["train", "visualize", "perturbation"]
+    )
     parser.add_argument("--config", required=True)
     parser.add_argument(
         "--model_path", help="Path to model weights (for visualization)"

@@ -3,6 +3,7 @@ from models import get_model
 from trainers import get_trainer
 from utils.losses import get_loss
 from utils.callbacks import get_callbacks, CallbackManager
+from utils.commons import get_resize_transform
 from config.device_config import get_device
 
 import torch
@@ -10,12 +11,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 from collections import Counter
 import numpy as np
-
-
-def get_resize_transform(size):
-    from torchvision import transforms as T
-
-    return T.Compose([T.Resize((size, size)), T.ToTensor()])
 
 
 def compute_class_weights(class_counts, device):

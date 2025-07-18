@@ -4,23 +4,9 @@ from utils.commons import get_classes_from_module
 from .model_conv_attributes_32 import CapsuleNetworkWithAttributes32
 
 
-# def get_model_classes():
-#     def get_all_subclasses(cls):
-#         subclasses = set()
-#         for subclass in cls.__subclasses__():
-#             subclasses.add(subclass)
-#             subclasses.update(get_all_subclasses(subclass))
-#         return subclasses
-
-#     return {
-#         cls.__name__: cls
-#         for cls in get_all_subclasses(nn.Module)
-#         if cls.__module__.startswith("model")
-#     }
-
-
 def get_model(config, data_loader, device):
-    img_shape = data_loader["train"].dataset[0][0].numpy().shape
+    first_key = list(data_loader.keys())[0]
+    img_shape = data_loader[first_key].dataset[0][0].numpy().shape
 
     model_classes = get_classes_from_module(
         module_startswith="model", parent_class=nn.Module
@@ -35,6 +21,6 @@ def get_model(config, data_loader, device):
     accepted_args = sig.parameters.keys()
 
     if "num_attributes" in accepted_args:
-        kwargs["num_attributes"] = data_loader["train"].dataset[0][2].shape[0]
+        kwargs["num_attributes"] = data_loader[first_key].dataset[0][2].shape[0]
 
     return model_class(img_shape=img_shape, device=device, **kwargs)

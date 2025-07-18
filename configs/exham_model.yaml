@@ -34,3 +34,8 @@ callbacks:
 
 system:
     seed: 123
+
+perturbation:
+    num_samples: 3
+    model_name: ./checkpoints/7.0_2025-06-08_01-44-34.029943.pth.tar
+    is_global: True
