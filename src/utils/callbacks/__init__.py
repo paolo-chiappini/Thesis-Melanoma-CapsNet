@@ -1,9 +1,11 @@
 from .callback import Callback
 from .callback_manager import CallbackManager
+from .callback_reconstruction import ReconstructionCallback
+from .callback_plot import PlotCallback
 
 callbacks = {cls.__name__: cls for cls in Callback.__subclasses__()}
 
-__all__ = ["Callback", "CallbackManager", *callback.keys()]
+__all__ = ["Callback", "CallbackManager", *callbacks.keys()]
 
 
 def get_callbacks(callback_config):

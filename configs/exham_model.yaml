@@ -1,13 +1,16 @@
 dataset:
-    name: EXHAM
+    name: EXHAMDataset
     root: ./data/EXHAMDataset
-    matadata_path: null
+    metadata_path: null
+    image_extension: null
     augment: False
     batch_size: 16
 
+preprocess:
+    img_size: 256
+
 model:
     name: CapsuleNetworkWithAttributes32
-    img_size: 256
     channels: 3
     primary_dim: 8
     output_dim: 16
@@ -16,7 +19,7 @@ model:
     routing_algorithm: sigmoid
 
 trainer:
-    name: TrainerWithAttributes
+    name: CapsNetTrainerVAs
     epochs: 50
     learning_rate: 0.001
     lr_decay: 0.96

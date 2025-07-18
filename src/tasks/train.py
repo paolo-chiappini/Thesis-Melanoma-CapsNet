@@ -2,7 +2,7 @@ from utils.loaders import get_dataset
 from models import get_model
 from trainers import get_trainer
 from utils.losses import get_loss
-from utils.callbacks import get_callbacks
+from utils.callbacks import get_callbacks, CallbackManager
 from config.device_config import get_device
 
 import torch
@@ -33,6 +33,7 @@ def make_splitter(seed):
 
 def run_training(config, model_path=None, cpu_override=False):
     dataset_config = config["dataset"]
+    preprocess_config = config["preprocess"]
     model_config = config["model"]
     trainer_config = config["trainer"]
     callback_config = config.get("callbacks", [])
@@ -40,7 +41,7 @@ def run_training(config, model_path=None, cpu_override=False):
 
     device, multi_gpu = get_device(cpu_override=cpu_override)
 
-    transform = get_resize_transform(model_config["img_size"])
+    transform = get_resize_transform(preprocess_config["img_size"])
     dataset = get_dataset(dataset_config, transform=transform)
 
     class_counts = Counter(dataset.labels)
@@ -75,13 +76,15 @@ def run_training(config, model_path=None, cpu_override=False):
 
     loss_criterion = get_loss(trainer_config["loss"], class_weights)
 
-    trainer = get_trainer(trainer_config, model, loaders, loss_criterion)
+    trainer = get_trainer(trainer_config, model, loaders, loss_criterion, device=device)
 
     callbacks = get_callbacks(callback_config)
+    callback_manager = None
+    if len(callbacks) > 0:
+        callback_manager = CallbackManager(callbacks=callbacks)
 
     trainer.run(
         trainer_config["epochs"],
-        list(range(model_config["num_classes"])),
-        callback_manager=callbacks,
+        callback_manager=callback_manager,
     )
     print("=" * 10, "Run finished", "=" * 10)

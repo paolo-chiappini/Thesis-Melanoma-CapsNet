@@ -1,17 +1,43 @@
-from .trainer_with_attributes import CapsNetTrainer
+import torch.optim as optim
+from utils.commons import get_classes_from_module, get_all_subclasses
 
-def get_trainer(config, model, data_loader, loss_criterion):
-    batch_size = data_loader.batch_size 
-    
-    match config['name']: 
-        case 'TrainerWithAttributes':
-            return CapsNetTrainer(
-                loaders=data_loader,
-                batch_size=batch_size,
-                learning_rate=config['learning_rate'],
-                lr_decay=config['lr_decay'],
-                network=model,
-                criterion=loss_criterion
-            )
-        case _:
-            raise NotImplementedError(f'Unknown trainer: {config['name']}')
+from .trainer_base import BaseTrainer
+from .trainer_capsnet_vas import CapsNetTrainerVAs
+
+
+def get_trainer(
+    config,
+    model,
+    data_loader,
+    loss_criterion,
+    optimizer=None,
+    scheduler=None,
+    device="cuda",
+    checkpoints_dir="checkpoints",
+):
+    trainer_classes = get_classes_from_module(
+        module_startswith="trainers", parent_class=BaseTrainer
+    )
+
+    name = config["name"]
+    trainer_class = trainer_classes.get(name)
+    if trainer_class is None:
+        raise ValueError(f"Unknown trainer: {name}")
+
+    if optimizer is None:
+        optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])
+
+    if scheduler is None:
+        scheduler = optim.lr_scheduler.ExponentialLR(
+            optimizer=optimizer, gamma=config["lr_decay"]
+        )
+
+    return trainer_class(
+        model,
+        data_loader,
+        loss_criterion,
+        optimizer,
+        scheduler,
+        device,
+        checkpoints_dir,
+    )

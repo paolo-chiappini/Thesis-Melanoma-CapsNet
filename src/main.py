@@ -3,8 +3,8 @@ import yaml
 import torch
 import random
 import numpy as np
-from .tasks import get_task
-from .config.device_config import get_device
+from tasks import get_task
+from config.device_config import get_device
 
 
 def set_seed(seed):

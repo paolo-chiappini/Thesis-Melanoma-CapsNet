@@ -10,7 +10,7 @@ from collections import Counter
 from trainers import trainer_autoencoder
 from utils.callbacks import PlotCallback, ReconstructionCallback, CallbackManager
 from models.autoencoder import ConvAutoencoder
-from utils.losses.ae_losses import AECompositeLoss
+from src.utils.losses.losses_ae import AECompositeLoss
 
 
 def set_seed(seed):
