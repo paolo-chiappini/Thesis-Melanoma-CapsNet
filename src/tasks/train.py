@@ -20,10 +20,23 @@ def compute_class_weights(class_counts, device):
     return torch.tensor(weights).to(device)
 
 
-def make_splitter(seed):
+def stratified_split(labels, val_size=0.1, test_size=0.1, seed=123):
     from sklearn.model_selection import StratifiedShuffleSplit
 
-    return StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=seed)
+    indices = np.arange(len(labels))
+    labels = np.array(labels)
+
+    # split holdout set
+    test = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=seed)
+    train_val_idx, test_idx = next(test.split(indices, labels))
+
+    # split train and validation
+    validation = StratifiedShuffleSplit(
+        n_splits=1, test_size=val_size / (1 - test_size), random_state=seed
+    )
+    train_idx, val_idx = next(validation.split(train_val_idx, labels[train_val_idx]))
+
+    return train_val_idx[train_idx], train_val_idx[val_idx], test_idx
 
 
 def run_training(config, model_path=None, cpu_override=False):
@@ -43,11 +56,22 @@ def run_training(config, model_path=None, cpu_override=False):
     class_weights = compute_class_weights(class_counts, device)
     print(f"Class counts: {class_counts}, Class weights: {class_weights}")
 
-    splitter = make_splitter(system_config["seed"])
-    train_idx, val_idx = next(splitter.split(np.zeros(len(dataset)), dataset.labels))
+    val_size = dataset_config.get("val_size", 0.1)
+    test_size = dataset_config.get("test_size", 0.1)
+    train_idx, val_idx, test_idx = stratified_split(
+        dataset.labels,
+        val_size=val_size,
+        test_size=test_size,
+        seed=system_config["seed"],
+    )
 
     train_dataset = Subset(dataset, train_idx)
     val_dataset = Subset(dataset, val_idx)
+    test_dataset = Subset(dataset, test_idx)
+
+    print(
+        f"Dataset split -> Train: {len(train_dataset)}, Val: {len(val_dataset)}, Test: {len(test_dataset)}"
+    )
 
     num_workers = 0 if not multi_gpu else 2
 
@@ -59,8 +83,11 @@ def run_training(config, model_path=None, cpu_override=False):
         "train": DataLoader(
             train_dataset, batch_size, shuffle=True, num_workers=num_workers
         ),
-        "test": DataLoader(
+        "val": DataLoader(
             val_dataset, batch_size, shuffle=False, num_workers=num_workers
+        ),
+        "test": DataLoader(
+            test_dataset, batch_size, shuffle=False, num_workers=num_workers
         ),
     }
 

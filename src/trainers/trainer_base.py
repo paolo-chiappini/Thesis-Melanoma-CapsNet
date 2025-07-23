@@ -58,10 +58,12 @@ class BaseTrainer(ABC):
         """
         raise NotImplementedError
 
-    def train_one_epoch(self, epoch, callback_manager=None):
+    def train_one_epoch(self, epoch, callback_manager=None, split="train"):
+        assert split in self.loaders, f"'{split}' loader not found in self.loaders."
+
         self.model.train()
         running_loss = 0.0
-        loader = self.loaders["train"]
+        loader = self.loaders[split]
 
         progress = tqdm(loader, desc=f"Train Epoch {epoch}")
         for i, batch in enumerate(progress):
@@ -84,10 +86,12 @@ class BaseTrainer(ABC):
 
         return running_loss / len(loader)
 
-    def evaluate(self, epoch, callback_manager=None):
+    def evaluate(self, epoch, callback_manager=None, split="val"):
+        assert split in self.loaders, f"'{split}' loader not found in self.loaders."
+
         self.model.eval()
         running_loss = 0.0
-        loader = self.loaders["test"]
+        loader = self.loaders[split]
 
         with torch.no_grad():
             for i, batch in enumerate(loader):
@@ -117,3 +121,46 @@ class BaseTrainer(ABC):
                 self.scheduler.step()
 
         self.save_checkpoint()
+
+    def test(self, split="test"):
+        """
+        Runs evaluation on the holdout/test set.
+        """
+        assert split in self.loaders, f"'{split}' loader not found in self.loaders."
+
+        self.model.eval()
+        running_loss = 0.0
+        all_metrics = []
+
+        loader = self.loaders[split]
+        with torch.no_grad():
+            for batch in tqdm(loader, desc=f"Testing on {split}"):
+                batch_data = self.prepare_batch(batch)
+                outputs = self.model(*batch_data["inputs"])
+
+                # compute loss
+                loss = self.compute_loss(outputs, batch_data)
+                running_loss += loss.item()
+
+                # compute metrics
+                metrics = self.compute_metrics(outputs, batch_data)
+                all_metrics.append(metrics)
+
+        # aggregate metrics (assuming metrics are dicts)
+        avg_metrics = self._aggregate_metrics(all_metrics)
+        avg_loss = running_loss / len(loader)
+
+        print(f"Test Results -> Loss: {avg_loss:.4f}, Metrics: {avg_metrics}")
+        return {"loss": avg_loss, **avg_metrics}
+
+    def _aggregate_metrics(self, metrics_list):
+        """
+        Aggregates a list of metrics dictionaries into averages.
+        """
+        if not metrics_list:
+            return {}
+
+        aggregated = {}
+        for key in metrics_list[0]:
+            aggregated[key] = sum(m[key] for m in metrics_list) / len(metrics_list)
+        return aggregated

@@ -5,6 +5,8 @@ dataset:
     image_extension: null
     augment: False
     batch_size: 16
+    val_size: 0.1
+    test_size: 0.1
 
 preprocess:
     img_size: 256
