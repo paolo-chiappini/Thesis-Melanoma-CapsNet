@@ -3,6 +3,7 @@ from utils.commons import get_classes_from_module, get_all_subclasses
 
 from .trainer_base import BaseTrainer
 from .trainer_capsnet_vas import CapsNetTrainerVAs
+from .trainer_autoencoder import AutoEncoderTrainer
 
 
 def get_trainer(

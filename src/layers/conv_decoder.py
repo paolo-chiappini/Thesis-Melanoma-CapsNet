@@ -12,6 +12,19 @@ class ConvDecoder(nn.Module):
         fmap_width=9,
         layers=None,
     ):
+        super().__init__()
+        self.img_channels = img_shape[0]
+        self.img_height = img_shape[1]
+        self.img_width = img_shape[1]
+
+        self.fmap_channels = fmap_channels
+        self.fmap_height = fmap_height
+        self.fmap_width = fmap_width
+
+        self.fc_layer = nn.Linear(
+            latent_dim, self.fmap_channels * self.fmap_height * self.fmap_width
+        )
+
         self.layers = (
             [
                 nn.ConvTranspose2d(
@@ -41,19 +54,6 @@ class ConvDecoder(nn.Module):
             ]
             if layers is None
             else layers
-        )
-
-        super().__init__()
-        self.img_channels = img_shape[0]
-        self.img_height = img_shape[1]
-        self.img_width = img_shape[1]
-
-        self.fmap_channels = fmap_channels
-        self.fmap_height = fmap_height
-        self.fmap_width = fmap_width
-
-        self.fc_layer = nn.Linear(
-            latent_dim, self.fmap_channels * self.fmap_height * self.fmap_width
         )
 
         self.decoder = nn.Sequential(*self.layers)

@@ -4,11 +4,12 @@ from layers import ConvDecoder
 
 
 class ConvAutoencoder(nn.Module):
-    def __init__(self, image_shape=(3, 282, 282), latent_dim=1024):
+    def __init__(self, img_shape=(3, 282, 282), latent_dim=1024, device="cuda"):
         super().__init__()
         self.latent_dim = latent_dim
-        self.image_shape = image_shape
+        self.image_shape = img_shape
         self.image_channels = self.image_shape[0]
+        self.device = device
 
         # --- ENCODER ---
         self.encoder = nn.Sequential(

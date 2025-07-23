@@ -2,6 +2,7 @@ import inspect
 import torch.nn as nn
 from utils.commons import get_classes_from_module
 from .model_conv_attributes_32 import CapsuleNetworkWithAttributes32
+from .autoencoder import ConvAutoencoder
 
 
 def get_model(config, data_loader, device):

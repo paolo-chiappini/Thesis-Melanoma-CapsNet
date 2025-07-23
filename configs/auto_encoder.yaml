@@ -1,0 +1,30 @@
+dataset:
+    name: EXHAMDataset
+    root: ./data/EXHAMDataset
+    metadata_path: null
+    image_extension: null
+    augment: False
+    batch_size: 16
+
+preprocess:
+    img_size: 282
+
+model:
+    name: ConvAutoencoder
+    latent_dim: 1024
+
+trainer:
+    name: AutoEncoderTrainer
+    epochs: 50
+    learning_rate: 0.0001
+    lr_decay: 0.96
+    loss:
+        name: AECompositeLoss
+
+callbacks:
+    - name: PlotCallback
+    - name: ReconstructionCallback
+      frequency: 3
+
+system:
+    seed: 123

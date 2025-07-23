@@ -33,16 +33,30 @@ class PerceptualLoss(nn.Module):
 
 
 class AECompositeLoss(nn.Module):
-    def __init__(self, alpha=1.0, beta=1.0, gamma=0.1, perceptual=True):
+    def __init__(
+        self, alpha=1.0, beta=1.0, gamma=0.1, perceptual=True, class_weights=None
+    ):
         super(AECompositeLoss, self).__init__()
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
         self.perceptual = PerceptualLoss() if perceptual else None
         self.l1 = nn.L1Loss()
+        self.class_weights = (
+            torch.tensor(class_weights, dtype=torch.float32)
+            if class_weights is not None
+            else None
+        )
 
     def forward(self, reconstruction, target):
         l1_loss = self.l1(reconstruction, target)
+
+        if self.class_weights is not None:
+            # ensure class_weights matches the number of channels
+            cw = self.class_weights.to(reconstruction.device)
+            cw = cw.view(1, -1, 1, 1)  # shape for broadcasting
+            l1_loss = l1_loss * cw
+
         ssim_loss = 1 - ssim(reconstruction, target, data_range=1.0, size_average=True)
         perceptual_loss = (
             self.perceptual(reconstruction, target) if self.perceptual else 0.0
