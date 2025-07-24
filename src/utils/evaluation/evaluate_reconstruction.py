@@ -29,7 +29,7 @@ def evaluate_reconstruction(model, dataloader, device="cuda", prepare_batch=None
             images_np = images.permute(0, 2, 3, 1).cpu().numpy()
             recon_np = recon.permute(0, 2, 3, 1).cpu().numpy()
             for img, rec in zip(images_np, recon_np):
-                ssim_scores.append(ssim(img, rec, multichannel=True, data_range=1.0))
+                ssim_scores.append(ssim(img, rec, channel_axis=-1, data_range=1.0))
                 psnr_scores.append(psnr(img, rec, data_range=1.0))
 
     results = {

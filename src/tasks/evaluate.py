@@ -47,7 +47,11 @@ def run_evaluation(config, model_path=None, cpu_override=False):
 
     model = get_model(model_config, data_loader=loader, device=device)
     model.load_state_dict(
-        torch.load(evaluation_config["model_name"], weights_only=False)
+        torch.load(
+            evaluation_config["model_name"],
+            weights_only=False,
+            map_location=torch.device(device),
+        )
     )
 
     loss_criterion = get_loss(trainer_config["loss"], None)

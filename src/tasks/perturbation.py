@@ -68,7 +68,11 @@ def run_perturbation(config, model_path=None, cpu_override=False):
 
     model = get_model(model_config, data_loader=loader, device=device)
     model.load_state_dict(
-        torch.load(visualization_config["model_name"], weights_only=False)
+        torch.load(
+            visualization_config["model_name"],
+            weights_only=False,
+            map_location=torch.device(device),
+        )
     )
 
     # generate global perturbations

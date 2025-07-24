@@ -22,8 +22,8 @@ model:
 
 trainer:
     name: CapsNetTrainerVAs
-    save_name: model_Refactored_Test_CNA32
-    epochs: 5
+    save_name: model_Test_Evaluation
+    epochs: 10
     learning_rate: 0.001
     lr_decay: 0.96
     loss:
@@ -40,8 +40,8 @@ system:
 
 perturbation:
     num_samples: 3
-    model_name: ./checkpoints/model_Refactored_Test_CNA32.pth.tar
+    model_name: ./checkpoints/model_Test_Evaluation.pth.tar
     is_global: True
 
 evaluate:
-    model_name: ./checkpoints/model_Refactored_Test_CNA32.pth.tar
+    model_name: ./checkpoints/model_Test_Evaluation.pth.tar
