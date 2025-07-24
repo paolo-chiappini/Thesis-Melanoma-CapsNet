@@ -41,4 +41,5 @@ def get_trainer(
         scheduler,
         device,
         checkpoints_dir,
+        save_name=config["save_name"],
     )

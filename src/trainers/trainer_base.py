@@ -15,6 +15,7 @@ class BaseTrainer(ABC):
         scheduler=None,
         device="cuda",
         checkpoints_dir="checkpoints",
+        save_name=None,
     ):
         self.model = model
         self.loaders = loaders
@@ -23,6 +24,7 @@ class BaseTrainer(ABC):
         self.scheduler = scheduler
         self.device = device
         self.checkpoints_dir = checkpoints_dir
+        self.save_name = save_name
 
         os.makedirs(checkpoints_dir, exist_ok=True)
 
@@ -70,7 +72,7 @@ class BaseTrainer(ABC):
             batch_data = self.prepare_batch(batch)
             self.optimizer.zero_grad()
 
-            outputs = self.model(*batch_data["inputs"])
+            outputs = self.model(batch_data["inputs"])
             loss = self.compute_loss(outputs, batch_data)
             loss.backward()
             self.optimizer.step()
@@ -80,10 +82,23 @@ class BaseTrainer(ABC):
 
             if callback_manager:
                 callback_manager.on_batch_end(
-                    i,
-                    {"loss": running_loss / (i + 1), "epoch": epoch, "phase": "train"},
+                    batch=i,
+                    logs={
+                        "loss": running_loss / (i + 1),
+                        "epoch": epoch,
+                        "phase": split,
+                    },
                 )
 
+        if callback_manager:
+            callback_manager.on_epoch_end(
+                epoch=epoch,
+                logs={
+                    "loss": running_loss / len(loader),
+                    "epoch": epoch,
+                    "phase": split,
+                },
+            )
         return running_loss / len(loader)
 
     def evaluate(self, epoch, callback_manager=None, split="val"):
@@ -92,20 +107,49 @@ class BaseTrainer(ABC):
         self.model.eval()
         running_loss = 0.0
         loader = self.loaders[split]
+        images = []
 
         with torch.no_grad():
             for i, batch in enumerate(loader):
                 batch_data = self.prepare_batch(batch)
-                outputs = self.model(*batch_data["inputs"])
+                images = batch_data["inputs"]
+                outputs = self.model(images)
                 loss = self.compute_loss(outputs, batch_data)
                 running_loss += loss.item()
 
+                if callback_manager:
+                    callback_manager.on_batch_end(
+                        batch=i,
+                        logs={
+                            "loss": running_loss / (i + 1),
+                            "epoch": epoch,
+                            "phase": split,
+                        },
+                    )
+
+        if callback_manager:
+            callback_manager.on_epoch_end(
+                epoch=epoch,
+                logs={
+                    "loss": running_loss / len(loader),
+                    "epoch": epoch,
+                    "phase": split,
+                },
+            )
+
+            reconstructions = outputs[1]
+            callback_manager.on_reconstruction(
+                images[:8], reconstructions[:8], epoch, split
+            )
         return running_loss / len(loader)
 
     def save_checkpoint(self, name=None):
         now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S.%f")
-        name = name or f"model_{now}.pth.tar"
-        torch.save(self.model.state_dict(), os.path.join(self.checkpoints_dir, name))
+        name = name or f"model_{now}"
+        name += ".pth.tar"
+        output_dir = os.path.join(self.checkpoints_dir, name)
+        torch.save(self.model.state_dict(), output_dir)
+        print(f"Model {name} saved at location {output_dir}")
 
     def run(self, epochs, callback_manager=None):
         print(callback_manager)
@@ -120,7 +164,7 @@ class BaseTrainer(ABC):
             if self.scheduler:
                 self.scheduler.step()
 
-        self.save_checkpoint()
+        self.save_checkpoint(self.save_name)
 
     def test(self, split="test"):
         """
@@ -136,7 +180,7 @@ class BaseTrainer(ABC):
         with torch.no_grad():
             for batch in tqdm(loader, desc=f"Testing on {split}"):
                 batch_data = self.prepare_batch(batch)
-                outputs = self.model(*batch_data["inputs"])
+                outputs = self.model(batch_data["inputs"])
 
                 # compute loss
                 loss = self.compute_loss(outputs, batch_data)

@@ -22,7 +22,7 @@ class ReconstructionCallback(Callback):
         os.makedirs(self.save_dir, exist_ok=True)
 
     def on_reconstruction(self, images, reconstructions, epoch, phase):
-        if phase == "test" and epoch % self.frequency == 0:
+        if phase == "val" and epoch % self.frequency == 0:
             print(f"Reconstruction at epoch {epoch} - {phase}")
             images = images.cpu().detach()
             reconstructions = reconstructions.cpu().detach()

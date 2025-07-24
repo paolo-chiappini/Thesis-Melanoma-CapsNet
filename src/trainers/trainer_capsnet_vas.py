@@ -8,7 +8,7 @@ class CapsNetTrainerVAs(BaseTrainer):
     def prepare_batch(self, batch):
         images, labels, visual_attributes, masks = batch
         return {
-            "inputs": (images.to(self.device),),
+            "inputs": images.to(self.device),
             "labels": labels.to(self.device),
             "visual_attributes": visual_attributes.to(self.device),
             "masks": masks.to(self.device),

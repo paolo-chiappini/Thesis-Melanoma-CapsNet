@@ -101,9 +101,7 @@ def run_training(config, model_path=None, cpu_override=False):
     trainer = get_trainer(trainer_config, model, loaders, loss_criterion, device=device)
 
     callbacks = get_callbacks(callback_config)
-    callback_manager = None
-    if len(callbacks) > 0:
-        callback_manager = CallbackManager(callbacks=callbacks)
+    callback_manager = CallbackManager(callbacks=callbacks)
 
     trainer.run(
         trainer_config["epochs"],

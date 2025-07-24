@@ -6,7 +6,7 @@ class AutoEncoderTrainer(BaseTrainer):
     def prepare_batch(self, batch):
         images, _, _, _ = batch
         images = images.to(self.device)
-        return {"inputs": (images,), "targets": images}
+        return {"inputs": images, "targets": images}
 
     def compute_loss(self, outputs, batch_data):
         return self.criterion(outputs, batch_data["targets"])

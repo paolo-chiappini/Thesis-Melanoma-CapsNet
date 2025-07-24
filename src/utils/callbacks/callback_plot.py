@@ -16,24 +16,23 @@ class PlotCallback(Callback):
 
         os.makedirs(self.save_dir, exist_ok=True)
 
-        self.epoch_loss = {"train": [], "test": []}
-        self.epoch_accuracy = {"train": [], "test": []}
+        self.epoch_loss = {"train": [], "val": []}
+        self.epoch_accuracy = {"train": [], "val": []}
 
     def on_epoch_end(self, epoch, logs=None):
         if logs is not None:
-            print(f"Epoch {epoch} - {logs}")
             phase = logs.get("phase")
             self.epoch_loss[phase].append(logs.get("loss"))
             self.epoch_accuracy[phase].append(logs.get("accuracy"))
 
-            if phase == "test":
+            if phase == "val":
                 self._plot(epoch=epoch)
 
     def _plot(self, epoch):
         plt.figure(figsize=(12, 5))
         plt.subplot(1, 2, 1)
         plt.plot(self.epoch_loss["train"], label="Train Loss")
-        plt.plot(self.epoch_loss["test"], label="Test Loss")
+        plt.plot(self.epoch_loss["val"], label="Validation Loss")
         plt.title("Loss")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
@@ -41,7 +40,7 @@ class PlotCallback(Callback):
 
         plt.subplot(1, 2, 2)
         plt.plot(self.epoch_accuracy["train"], label="Train Accuracy")
-        plt.plot(self.epoch_accuracy["test"], label="Test Accuracy")
+        plt.plot(self.epoch_accuracy["val"], label="Validation Accuracy")
         plt.title("Accuracy")
         plt.xlabel("Epoch")
         plt.ylabel("Accuracy")
