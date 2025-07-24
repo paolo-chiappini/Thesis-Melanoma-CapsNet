@@ -5,6 +5,8 @@ import random
 import numpy as np
 from tasks import get_task
 from config.device_config import get_device
+import time
+from datetime import timedelta
 
 
 def set_seed(seed):
@@ -17,9 +19,13 @@ def set_seed(seed):
 
 
 def main():
+    start_time = time.time()
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--task", required=True, choices=["train", "visualize", "perturbation"]
+        "--task",
+        required=True,
+        choices=["train", "visualize", "perturbation", "evaluate"],
     )
     parser.add_argument("--config", required=True)
     parser.add_argument(
@@ -33,8 +39,13 @@ def main():
 
     set_seed(config["system"]["seed"])
 
+    print(">" * 5 + f" Running task: [{args.task}]")
+
     task_fn = get_task(args.task)
     task_fn(config, model_path=args.model_path, cpu_override=args.cpu)
+
+    elapsed = time.time() - start_time
+    print(f"\n✅ Finished in {str(timedelta(seconds=round(elapsed)))}")
 
 
 if __name__ == "__main__":

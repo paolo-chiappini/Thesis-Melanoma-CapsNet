@@ -126,21 +126,58 @@ class CapsuleNetworkWithAttributes32(nn.Module):
             print_all=True,
         )
 
-    def forward(self, x):
+    def encode(self, x):
+        """
+        Encode the image into capsule activations.
+
+        Args:
+            x (torch.Tensor): Input image batch.
+        Returns:
+            torch.Tensor: Capsule activations [B, num_capsules, capsule_dim].
+        """
         for layer in self.encoder:
             x = layer(x)
         out = self.primary(x)
         out = self.digits(out)
+        return out
 
-        malignancy_scores = self.malignancy_fc(out)
-        preds = torch.norm(out, dim=-1)  # Length layer form LaLonde
+    def classify(self, capsules):
+        """
+        Return the predictions and malignancy scores
 
-        # Reconstruct image
-        _, max_length_idx = preds.max(dim=1)
-        y = torch.eye(self.num_attributes).to(self.device)
-        y = y.index_select(dim=0, index=max_length_idx).unsqueeze(2)
+        Args:
+            capsules (torch.Tensore): Capsule activations [B, num_capsules, capsule_dim].
+        Returns:
+            (torch.Tensor, torch.Tensor): (attributes_preds, malignancy_scores).
+        """
+        malignancy_scores = self.malignancy_fc(capsules)
+        preds = torch.norm(capsules, dim=-1)  # Length layer form LaLonde
+        return preds, malignancy_scores
 
-        reconstructions = self.decoder((out * y).view(out.size(0), -1))
+    def decode(self, capsules, y=None):
+        """
+        Returns the reconstruction of input x. If y is None, the max-length capsule is selected.
+
+        Args:
+            x (torch.Tensor): Input image batch.
+            y (torch.Tensor, optional): One-hot lables for masking capsules. Defaults to None.
+        Returns:
+            torch.Tensor: Reconstructed images [B, C, H, W].
+        """
+        preds = torch.norm(capsules, dim=-1)
+        if y is None:
+            _, max_length_idx = preds.max(dim=1)
+            y = torch.eye(self.num_attributes).to(self.device)
+            y = y.index_select(dim=0, index=max_length_idx).unsqueeze(2)
+        else:
+            if y.dim() == 2:
+                y = y.unsqueeze(2)
+        reconstructions = self.decoder((capsules * y).view(capsules.size(0), -1))
         reconstructions = reconstructions.view(-1, *self.img_shape)
+        return reconstructions
 
-        return preds, reconstructions, malignancy_scores, out
+    def forward(self, x, y=None):
+        capsules = self.encode(x)
+        preds, malignancy_scores = self.classify(capsules)
+        reconstructions = self.decode(capsules, y)
+        return preds, reconstructions, malignancy_scores, capsules

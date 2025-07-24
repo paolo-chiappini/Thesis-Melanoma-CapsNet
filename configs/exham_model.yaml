@@ -23,7 +23,7 @@ model:
 trainer:
     name: CapsNetTrainerVAs
     save_name: model_Refactored_Test_CNA32
-    epochs: 2
+    epochs: 5
     learning_rate: 0.001
     lr_decay: 0.96
     loss:
@@ -33,12 +33,15 @@ trainer:
 callbacks:
     - name: PlotCallback
     - name: ReconstructionCallback
-      frequency: 1
+      frequency: 3
 
 system:
     seed: 123
 
 perturbation:
     num_samples: 3
-    model_name: ./checkpoints/7.0_2025-06-08_01-44-34.029943.pth.tar
+    model_name: ./checkpoints/model_Refactored_Test_CNA32.pth.tar
     is_global: True
+
+evaluate:
+    model_name: ./checkpoints/model_Refactored_Test_CNA32.pth.tar
