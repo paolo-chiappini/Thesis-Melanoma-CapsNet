@@ -59,6 +59,7 @@ class ConvDecoder(nn.Module):
         self.decoder = nn.Sequential(*self.layers)
 
     def forward(self, x):
+        x = x.view(x.size(0), -1)
         x = self.fc_layer(x)
         # reshape for convolution
         x = x.view(-1, self.fmap_channels, self.fmap_height, self.fmap_width)

@@ -1,5 +1,4 @@
 import torch.nn as nn
-from utils.layer_output_shape import get_conv2d_output_shape
 
 
 class Conv2d_BN(nn.Module):
@@ -24,12 +23,3 @@ class Conv2d_BN(nn.Module):
         out = self.bn(out)
         out = self.activation(out)
         return out
-
-    def get_output_shape(self, input_shape):
-        return get_conv2d_output_shape(
-            input_shape,
-            self.output_channels,
-            self.kernel_size,
-            self.stride,
-            self.padding,
-        )

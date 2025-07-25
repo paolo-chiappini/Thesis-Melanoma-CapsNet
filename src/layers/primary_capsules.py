@@ -1,6 +1,5 @@
 import torch.nn as nn
 from utils.functional import squash
-from utils.layer_output_shape import get_conv2d_output_shape
 
 
 class PrimaryCapsules(nn.Module):
@@ -48,12 +47,3 @@ class PrimaryCapsules(nn.Module):
         # Flatten outpus into (batch_size, _caps_num * H_caps * W_caps, C_caps)
         out = out.view(out.size(0), -1, self.capsule_dimension)
         return squash(out)
-
-    def get_output_shape(self, input_shape):
-        return get_conv2d_output_shape(
-            input_shape,
-            self.output_channels,
-            self.conv.kernel_size,
-            self.conv.stride,
-            self.conv.padding,
-        )

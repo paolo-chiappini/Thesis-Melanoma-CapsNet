@@ -58,6 +58,8 @@ class RoutingCapsules(nn.Module):
 
     def forward(self, x):
         batch_size = x.size(0)
+        device = x.device
+
         # Unsqueeze to (batch_size, 1, input_caps, input_dim, 1)
         x = x.unsqueeze(1).unsqueeze(4)
 
@@ -81,7 +83,7 @@ class RoutingCapsules(nn.Module):
         """
 
         b = torch.zeros(batch_size, self.num_class_caps, self.num_input_caps, 1).to(
-            self.device
+            device
         )
         for r in range(self.routing_steps - 1):
             if self.routing_algorithm == "sigmoid":
@@ -101,7 +103,3 @@ class RoutingCapsules(nn.Module):
         v = squash(s)
 
         return v
-
-    def get_output_shape(self, input_shape):
-        # Output shape is (batch_size, num_class_caps, capsule_dimension)
-        return (input_shape[0], self.num_class_caps, self.capsule_dimension)

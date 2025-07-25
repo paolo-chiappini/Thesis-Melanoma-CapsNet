@@ -10,6 +10,8 @@ from layers import (
 from numpy import prod
 from utils.layer_output_shape import get_network_output_shape
 
+_PRIMARY_CAPS_IDX = 1
+
 
 class CapsuleNetworkWithAttributes32(nn.Module):
     """
@@ -61,17 +63,10 @@ class CapsuleNetworkWithAttributes32(nn.Module):
             padding="valid",
         )
 
-        encoder_output_shape = get_network_output_shape(
-            (1, *img_shape),  # Add fictitious batch dimension to the input tensor
-            encoder_layers,
-            print_all=True,
+        capsules_output_shape = get_network_output_shape(
+            (1, *img_shape), [*encoder_layers, self.primary], print_all=True
         )
-        capsules_output_shape = self.primary.get_output_shape(encoder_output_shape)
-        print(f"Capsules output shape: {capsules_output_shape}")
-        _, _, h_caps, w_caps = capsules_output_shape
-        primary_caps = self.primary._caps_num * h_caps * w_caps
-
-        print(f"Capsules params: {w_caps} X {h_caps} X {primary_caps}")
+        primary_caps = capsules_output_shape[_PRIMARY_CAPS_IDX]
 
         self.digits = RoutingCapsules(
             primary_dim,
@@ -88,17 +83,6 @@ class CapsuleNetworkWithAttributes32(nn.Module):
             capsule_dim=output_dim,
             output_dim=num_classes,
         )
-
-        # Decoder
-        # decoder_layers = [
-        #     nn.Linear(output_dim * num_attributes, 512),
-        #     nn.ReLU(inplace=True),
-        #     nn.Linear(512, 1024),
-        #     nn.ReLU(inplace=True),
-        #     nn.Linear(1024, int(prod(img_shape))),
-        #     nn.Sigmoid(),
-        # ]
-        # self.decoder = nn.Sequential(*decoder_layers)
 
         self.decoder_layers = [
             nn.ConvTranspose2d(256, 256, kernel_size=7, stride=1, padding=1),
@@ -120,9 +104,10 @@ class CapsuleNetworkWithAttributes32(nn.Module):
             fmap_width=12,
             layers=self.decoder_layers,
         )
-        encoder_output_shape = get_network_output_shape(
+
+        _ = get_network_output_shape(
             capsules_output_shape,
-            self.decoder_layers,
+            [self.digits, self.decoder],
             print_all=True,
         )
 
