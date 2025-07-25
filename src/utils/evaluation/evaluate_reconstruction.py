@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import peak_signal_noise_ratio as psnr
 import numpy as np
+from tqdm import tqdm
 
 
 def evaluate_reconstruction(model, dataloader, device="cuda", prepare_batch=None):
@@ -16,7 +17,7 @@ def evaluate_reconstruction(model, dataloader, device="cuda", prepare_batch=None
     psnr_scores = []
 
     with torch.no_grad():
-        for batch in dataloader:
+        for batch in tqdm(dataloader, desc="Evaluating reconstruction", unit="batch"):
             batch_dict = prepare_batch(batch)
             images = batch_dict["inputs"].to(device)
 
@@ -28,7 +29,12 @@ def evaluate_reconstruction(model, dataloader, device="cuda", prepare_batch=None
 
             images_np = images.permute(0, 2, 3, 1).cpu().numpy()
             recon_np = recon.permute(0, 2, 3, 1).cpu().numpy()
-            for img, rec in zip(images_np, recon_np):
+            for img, rec in tqdm(
+                zip(images_np, recon_np),
+                total=len(images_np),
+                desc="Calculating SSIM/PSNR",
+                leave=False,
+            ):
                 ssim_scores.append(ssim(img, rec, channel_axis=-1, data_range=1.0))
                 psnr_scores.append(psnr(img, rec, data_range=1.0))
 

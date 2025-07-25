@@ -1,6 +1,7 @@
 from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
 import numpy as np
 import torch
+from tqdm import tqdm
 
 
 def compute_capsule_activations(model, dataloader, device="cuda", prepare_batch=None):
@@ -12,7 +13,9 @@ def compute_capsule_activations(model, dataloader, device="cuda", prepare_batch=
     all_caps = []
     all_attrs = []
     with torch.no_grad():
-        for batch in dataloader:
+        for batch in tqdm(
+            dataloader, desc="Extracting capsule activations", unit="batch"
+        ):
             batch_dict = prepare_batch(batch)
             images = batch_dict["inputs"].to(device)
             attrs = batch_dict["visual_attributes"].cpu().numpy()
@@ -20,27 +23,32 @@ def compute_capsule_activations(model, dataloader, device="cuda", prepare_batch=
 
             all_caps.append(caps.cpu().numpy())
             all_attrs.append(attrs)
+
     return np.concatenate(all_caps), np.concatenate(all_attrs)
 
 
 def mutual_information_capsules(caps_activations, attributes, discrete_attributes=True):
     """
-    Computes the mutual information between the capsule activations and the corresponding attributes
+    Computes the mutual information between the capsule activations and the corresponding attributes.
 
     Args:
-        caps_activations (Tuple): [N, num_caps * caps_dim]
-        attributes (Tuple): [N, num_attributes]
-        discrete_attributes (bool, optional): Defaults to True. If True binary attributes, else categorical.
+        caps_activations (ndarray): [N, num_caps * caps_dim]
+        attributes (ndarray): [N, num_attributes]
+        discrete_attributes (bool, optional): Defaults to True. If True, binary attributes, else continuous.
     """
     N, num_attributes = attributes.shape
     caps_flat = caps_activations.reshape(N, -1)
 
     mi_results = np.zeros((caps_flat.shape[1], num_attributes))
-    for i in range(num_attributes):
+
+    for i in tqdm(
+        range(num_attributes), desc="Computing mutual information", unit="attr"
+    ):
         y = attributes[:, i]
         if discrete_attributes:
             mi = mutual_info_classif(caps_flat, y, discrete_features=False)
         else:
             mi = mutual_info_regression(caps_flat, y)
         mi_results[:, i] = mi
+
     return mi_results

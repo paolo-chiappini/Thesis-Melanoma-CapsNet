@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from . import capsules as caps
+from layers import PrimaryCapsules, RoutingCapsules
 from numpy import prod
 
 
@@ -39,9 +39,7 @@ class CapsuleNetwork(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
         # Capsules
-        self.primary = caps.PrimaryCapsules(
-            channels, channels, primary_dim, kernel_size
-        )
+        self.primary = PrimaryCapsules(channels, channels, primary_dim, kernel_size)
 
         primary_caps = int(
             channels
@@ -50,7 +48,7 @@ class CapsuleNetwork(nn.Module):
             * (img_shape[2] - 2 * (kernel_size - 1))
             / 4
         )
-        self.digits = caps.RoutingCapsules(
+        self.digits = RoutingCapsules(
             primary_dim,
             primary_caps,
             num_classes,

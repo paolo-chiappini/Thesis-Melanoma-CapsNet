@@ -7,7 +7,7 @@ def plot_mi_heatmap(
     mi_matrix,
     attribute_names=None,
     capsule_names=None,
-    figsize=(12, 6),
+    figsize=None,
     save_path="./plots/mi_heatmap.png",
 ):
     """
@@ -20,6 +20,7 @@ def plot_mi_heatmap(
         figsize (tuple): Size of the plot.
         save_path (string): If not None, saves the heatmap image to this path.
     """
+    figsize = (mi_matrix.shape[1], mi_matrix.shape[0] // 4) or figsize
     plt.figure(figsize=figsize)
 
     if attribute_names is None:
@@ -34,13 +35,14 @@ def plot_mi_heatmap(
         cmap="viridis",
         annot=True,
         fmt=".2f",
-        cbar_kws={"label": "MI"},
+        cbar_kws={"label": "MI", "shrink": 0.5},
     )
 
+    plt.xticks(fontsize=8)
+    plt.yticks(fontsize=8)
     plt.title("Mutual Information: Capsules vs Attributes")
     plt.xlabel("Attributes")
     plt.ylabel("Capsule Dimensions")
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
-    plt.show()

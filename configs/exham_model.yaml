@@ -22,8 +22,8 @@ model:
 
 trainer:
     name: CapsNetTrainerVAs
-    save_name: model_Test_Evaluation
-    epochs: 10
+    save_name: model_CNWA32_100epochs
+    epochs: 100
     learning_rate: 0.001
     lr_decay: 0.96
     loss:
@@ -39,9 +39,10 @@ system:
     seed: 123
 
 perturbation:
-    num_samples: 3
-    model_name: ./checkpoints/model_Test_Evaluation.pth.tar
+    num_samples: 2
+    model_name: ./checkpoints/model_CNWA32_100epochs.pth.tar
     is_global: True
 
 evaluate:
-    model_name: ./checkpoints/model_Test_Evaluation.pth.tar
+    model_name: ./checkpoints/model_CNWA32_100epochs.pth.tar
+    split_size: 0.2

@@ -5,7 +5,7 @@ from utils.losses import get_loss
 from utils.commons import get_resize_transform
 from config.device_config import get_device
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from utils.evaluation import (
     evaluate_reconstruction,
     compute_capsule_activations,
@@ -13,6 +13,8 @@ from utils.evaluation import (
     summarize_evaluation,
 )
 from utils.visualization import plot_mi_heatmap
+from sklearn.model_selection import StratifiedShuffleSplit
+import numpy as np
 
 
 def run_evaluation(config, model_path=None, cpu_override=False):
@@ -21,11 +23,26 @@ def run_evaluation(config, model_path=None, cpu_override=False):
     preprocess_config = config["preprocess"]
     model_config = config["model"]
     trainer_config = config["trainer"]
+    system_config = config["system"]
 
     device, multi_gpu = get_device(cpu_override=cpu_override)
 
     tranform = get_resize_transform(preprocess_config["img_size"])
     dataset = get_dataset(dataset_config, transform=tranform)
+
+    labels = dataset.labels
+    attribute_names = dataset.visual_attributes
+
+    indices = np.arange(len(labels))
+    labels = np.array(labels)
+
+    test = StratifiedShuffleSplit(
+        n_splits=1,
+        test_size=evaluation_config["split_size"],
+        random_state=system_config["seed"],
+    )
+    _, test_idx = next(test.split(indices, labels))
+    dataset = Subset(dataset, test_idx)
 
     num_workers = 0 if not multi_gpu else 2
 
@@ -69,7 +86,6 @@ def run_evaluation(config, model_path=None, cpu_override=False):
     )
 
     # TODO: check if visual attributes exist in dataset
-    attribute_names = dataset.visual_attributes
     df_recon, df_mi = summarize_evaluation(recon_results, mi_results, attribute_names)
 
     df_recon.to_excel("./plots/reconstructions.xlsx", index=False)
