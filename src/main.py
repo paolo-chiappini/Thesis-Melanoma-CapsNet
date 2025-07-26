@@ -3,8 +3,7 @@ import yaml
 import torch
 import random
 import numpy as np
-from tasks import get_task
-from config.device_config import get_device
+from tasks import get_task, tasks
 import time
 from datetime import timedelta
 
@@ -25,7 +24,7 @@ def main():
     parser.add_argument(
         "--task",
         required=True,
-        choices=["train", "visualize", "perturbation", "evaluate"],
+        choices=[*tasks.keys()],
     )
     parser.add_argument("--config", required=True)
     parser.add_argument(

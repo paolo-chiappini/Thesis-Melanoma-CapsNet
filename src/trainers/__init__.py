@@ -15,6 +15,7 @@ def get_trainer(
     scheduler=None,
     device="cuda",
     checkpoints_dir="checkpoints",
+    save_name="model",
 ):
     trainer_classes = get_classes_from_module(
         module_startswith="trainers", parent_class=BaseTrainer
@@ -41,5 +42,5 @@ def get_trainer(
         scheduler,
         device,
         checkpoints_dir,
-        save_name=config["save_name"],
+        save_name=save_name,
     )

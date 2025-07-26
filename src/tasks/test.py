@@ -11,6 +11,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 from collections import Counter
 import numpy as np
+import os
 
 
 def compute_class_weights(class_counts, device):
@@ -39,12 +40,11 @@ def stratified_split(labels, val_size=0.1, test_size=0.1, seed=123):
     return train_val_idx[train_idx], train_val_idx[val_idx], test_idx
 
 
-def run_training(config, model_path=None, cpu_override=False):
+def run_testing(config, model_path=None, cpu_override=False):
     dataset_config = config["dataset"]
     preprocess_config = config["preprocess"]
     model_config = config["model"]
     trainer_config = config["trainer"]
-    callback_config = config.get("callbacks", [])
     system_config = config["system"]
 
     device, multi_gpu = get_device(cpu_override=cpu_override)
@@ -92,6 +92,15 @@ def run_training(config, model_path=None, cpu_override=False):
     }
 
     model = get_model(model_config, data_loader=loaders, device=device)
+    model.load_state_dict(
+        torch.load(
+            os.path.join(
+                system_config["save_path"], system_config["save_name"] + ".pth.tar"
+            ),
+            weights_only=False,
+            map_location=torch.device(device),
+        )
+    )
     model = model.to(device)
     if multi_gpu:
         model = nn.DataParallel(model)
@@ -108,11 +117,4 @@ def run_training(config, model_path=None, cpu_override=False):
         save_name=system_config["save_name"],
     )
 
-    callbacks = get_callbacks(callback_config)
-    callback_manager = CallbackManager(callbacks=callbacks)
-
-    trainer.run(
-        trainer_config["epochs"],
-        callback_manager=callback_manager,
-    )
-    print("=" * 10, "Run finished", "=" * 10)
+    trainer.test(split="val")

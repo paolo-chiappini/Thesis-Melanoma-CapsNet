@@ -22,13 +22,13 @@ model:
 
 trainer:
     name: CapsNetTrainerVAs
-    save_name: model_CNWA32_100epochs
-    epochs: 100
+    epochs: 40
     learning_rate: 0.001
     lr_decay: 0.96
     loss:
         name: CombinedLoss
-        reconstruction_loss_scale: 0.05
+        reconstruction_loss_scale: 0.0
+        # attribute_loss_lambda: 1
 
 callbacks:
     - name: PlotCallback
@@ -37,12 +37,12 @@ callbacks:
 
 system:
     seed: 123
+    save_name: model_CNWA32_40epochs_no_recon
+    save_path: ./checkpoints/
 
 perturbation:
     num_samples: 2
-    model_name: ./checkpoints/model_CNWA32_100epochs.pth.tar
     is_global: True
 
 evaluate:
-    model_name: ./checkpoints/model_CNWA32_100epochs.pth.tar
     split_size: 0.2

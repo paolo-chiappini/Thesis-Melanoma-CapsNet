@@ -1,3 +1,4 @@
+import os
 from utils.loaders import get_dataset
 from models import get_model
 from trainers import get_trainer
@@ -5,6 +6,7 @@ from utils.losses import get_loss
 from utils.commons import get_resize_transform
 from config.device_config import get_device
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 from utils.evaluation import (
     evaluate_reconstruction,
@@ -60,19 +62,31 @@ def run_evaluation(config, model_path=None, cpu_override=False):
         )
     }
 
-    print(evaluation_config["model_name"])
-
     model = get_model(model_config, data_loader=loader, device=device)
     model.load_state_dict(
         torch.load(
-            evaluation_config["model_name"],
+            os.path.join(
+                system_config["save_path"], system_config["save_name"] + ".pth.tar"
+            ),
             weights_only=False,
             map_location=torch.device(device),
         )
     )
 
+    model = model.to(device)
+    if multi_gpu:
+        model = nn.DataParallel(model)
+
     loss_criterion = get_loss(trainer_config["loss"], None)
-    trainer = get_trainer(trainer_config, model, loader, loss_criterion, device=device)
+    trainer = get_trainer(
+        trainer_config,
+        model,
+        loader,
+        loss_criterion,
+        device=device,
+        checkpoints_dir=system_config["save_path"],
+        save_name=system_config["save_name"],
+    )
     prepare_batch = trainer.prepare_batch
 
     recon_results = evaluate_reconstruction(

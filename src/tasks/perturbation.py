@@ -1,3 +1,4 @@
+import os
 from utils.loaders import get_dataset
 from models import get_model
 from utils.commons import get_resize_transform
@@ -40,6 +41,7 @@ def run_perturbation(config, model_path=None, cpu_override=False):
     dataset_config = config["dataset"]
     preprocess_config = config["preprocess"]
     model_config = config["model"]
+    system_config = config["system"]
 
     device, multi_gpu = get_device(cpu_override=cpu_override)
 
@@ -69,7 +71,9 @@ def run_perturbation(config, model_path=None, cpu_override=False):
     model = get_model(model_config, data_loader=loader, device=device)
     model.load_state_dict(
         torch.load(
-            visualization_config["model_name"],
+            os.path.join(
+                system_config["save_path"], system_config["save_name"] + ".pth.tar"
+            ),
             weights_only=False,
             map_location=torch.device(device),
         )
