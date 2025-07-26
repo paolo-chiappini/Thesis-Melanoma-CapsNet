@@ -109,6 +109,9 @@ class AttributeLoss(nn.Module):
         """
         device = attribute_scores.device
         attribute_targets = attribute_targets.to(device)
+        attribute_scores = attribute_scores.clamp(
+            0, 1
+        )  # TODO: remove this, I don't like it
         return self.loss_lambda * self.loss_criterion(
             attribute_scores, attribute_targets
         )

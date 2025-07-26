@@ -4,6 +4,7 @@ import torch
 from PIL import Image
 
 
+# TODO: Fix this
 class ISICDataset(BaseDataset):
     def __init__(
         self,

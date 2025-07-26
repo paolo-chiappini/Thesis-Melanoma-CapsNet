@@ -1,7 +1,9 @@
 from .trainer_base import BaseTrainer
 import torch
 
-__OUT_MALIGNANCY_SCORES_IDX = 2
+_OUT_VAS_SCORES_IDX = 0
+_OUT_MALIGNANCY_SCORES_IDX = 2
+_CORRECT_THRESHOLD = 0.75
 
 
 class CapsNetTrainerVAs(BaseTrainer):
@@ -15,9 +17,9 @@ class CapsNetTrainerVAs(BaseTrainer):
         }
 
     def compute_loss(self, outputs, batch_data):
-        outputs, reconstructions, malignancy_scores, class_pose_vectors = outputs
+        predicted_vas, reconstructions, malignancy_scores, class_pose_vectors = outputs
         return self.criterion(
-            outputs,
+            predicted_vas,
             batch_data["visual_attributes"],
             malignancy_scores,
             torch.eye(len(malignancy_scores[0])).to(self.device)[
@@ -29,6 +31,13 @@ class CapsNetTrainerVAs(BaseTrainer):
         )
 
     def compute_metrics(self, outputs, batch_data):
-        _, predicted = torch.max(outputs[__OUT_MALIGNANCY_SCORES_IDX], 1)
+        _, predicted = torch.max(outputs[_OUT_MALIGNANCY_SCORES_IDX], 1)
+        predicted_vas = outputs[_OUT_VAS_SCORES_IDX]
         accuracy = (predicted == batch_data["labels"]).float().mean().item()
-        return {"accuracy": accuracy}
+
+        predicted_vas = (predicted_vas >= _CORRECT_THRESHOLD).float()  # binarize
+        accuracy_vas = (
+            (predicted_vas == batch_data["visual_attributes"]).float().mean().item()
+        )
+
+        return {"accuracy": accuracy, "accuracy_vas": accuracy_vas}

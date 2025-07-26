@@ -1,0 +1,47 @@
+dataset:
+    name: EXHAMDataset
+    root: ./data/EXHAMDataset
+    metadata_path: null
+    image_extension: null
+    augment: False
+    batch_size: 16
+    val_size: 0.1
+    test_size: 0.1
+
+preprocess:
+    img_size: 128
+
+model:
+    name: CapsuleNetworkBase
+    channels: 3
+    primary_dim: 8
+    output_dim: 16
+    num_classes: 2
+    routing_steps: 3
+    routing_algorithm: sigmoid
+
+trainer:
+    name: CapsNetTrainerVAs
+    epochs: 100
+    learning_rate: 0.001
+    lr_decay: 0.96
+    loss:
+        name: CombinedLoss
+        reconstruction_loss_scale: 0.005
+
+callbacks:
+    - name: PlotCallback
+    - name: ReconstructionCallback
+      frequency: 3
+
+system:
+    seed: 123
+    save_name: model_CNWA32_100epochs_caps_only
+    save_path: ./checkpoints/
+
+perturbation:
+    num_samples: 2
+    is_global: True
+
+evaluate:
+    split_size: 0.2

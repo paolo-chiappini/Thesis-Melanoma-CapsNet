@@ -99,6 +99,11 @@ class BaseTrainer(ABC):
                     "phase": split,
                 },
             )
+
+        # TODO: remove
+        diff = outputs[0] - batch_data["visual_attributes"]
+        print(torch.round(diff * 100) / 100)
+
         return running_loss / len(loader)
 
     def evaluate(self, epoch, callback_manager=None, split="val"):
@@ -106,6 +111,7 @@ class BaseTrainer(ABC):
 
         self.model.eval()
         running_loss = 0.0
+        all_metrics = []
         loader = self.loaders[split]
         images = []
 
@@ -127,14 +133,21 @@ class BaseTrainer(ABC):
                         },
                     )
 
+                metrics = self.compute_metrics(outputs, batch_data)
+                all_metrics.append(metrics)
+
+        avg_metrics = self._aggregate_metrics(all_metrics)
         if callback_manager:
+            logs = {
+                "loss": running_loss / len(loader),
+                "epoch": epoch,
+                "phase": split,
+            }
+            logs.update(avg_metrics)
+
             callback_manager.on_epoch_end(
                 epoch=epoch,
-                logs={
-                    "loss": running_loss / len(loader),
-                    "epoch": epoch,
-                    "phase": split,
-                },
+                logs=logs,
             )
 
             reconstructions = outputs[1]
