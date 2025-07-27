@@ -2,8 +2,7 @@ from utils.loaders import get_dataset
 from models import get_model
 from trainers import get_trainer
 from utils.losses import get_loss
-from utils.callbacks import get_callbacks, CallbackManager
-from utils.commons import get_resize_transform
+from utils.commons import get_resize_transform, load_model
 from config.device_config import get_device
 
 import torch
@@ -92,18 +91,13 @@ def run_testing(config, model_path=None, cpu_override=False):
     }
 
     model = get_model(model_config, data_loader=loaders, device=device)
-    model.load_state_dict(
-        torch.load(
-            os.path.join(
-                system_config["save_path"], system_config["save_name"] + ".pth.tar"
-            ),
-            weights_only=False,
-            map_location=torch.device(device),
-        )
+    model = load_model(
+        model_structure=model,
+        model_name=system_config["save_name"],
+        checkpoints_dir=system_config["save_path"],
+        device=device,
+        multi_gpu=multi_gpu,
     )
-    model = model.to(device)
-    if multi_gpu:
-        model = nn.DataParallel(model)
 
     loss_criterion = get_loss(trainer_config["loss"], class_weights)
 
