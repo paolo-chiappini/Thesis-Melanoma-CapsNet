@@ -2,6 +2,7 @@ import os
 import torch
 import torch.nn as nn
 from collections import OrderedDict
+import numpy as np
 
 
 def get_all_subclasses(cls):
@@ -65,3 +66,51 @@ def strip_data_parallel(model_state_dict):
         new_state_dict[new_key] = v
 
     return new_state_dict
+
+
+def compute_weighted_accuracy(predicted, target, weights=None, num_labels=2):
+    target = target.long()  # ensure it's long for indexing
+    if weights is None:
+        weights = torch.ones(num_labels, device=predicted.device)
+
+    correct = (predicted == target).float()
+    weighted_accuracy = (correct * weights[target]).sum() / weights[target].sum()
+    weighted_accuracy = weighted_accuracy.item()
+
+    return weighted_accuracy
+
+
+def compute_binary_feature_weights(counts_ones, num_samples, device):
+    """
+    counts_ones: array of length F (count of 1s for each feature)
+    num_samples: total number of samples (N)
+    """
+    counts_zeros = num_samples - counts_ones
+    pos_weight = counts_zeros / (counts_ones + 1e-8)  # shape (F,)
+    return torch.tensor(pos_weight, dtype=torch.float32).to(device)
+
+
+def compute_class_weights(class_counts, device):
+    counts = np.array(list(class_counts.values()), dtype=np.float32)
+    weights = 1.0 / counts
+    weights /= weights.sum()
+    return torch.tensor(weights).to(device)
+
+
+def stratified_split(labels, val_size=0.1, test_size=0.1, seed=123):
+    from sklearn.model_selection import StratifiedShuffleSplit
+
+    indices = np.arange(len(labels))
+    labels = np.array(labels)
+
+    # split holdout set
+    test = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=seed)
+    train_val_idx, test_idx = next(test.split(indices, labels))
+
+    # split train and validation
+    validation = StratifiedShuffleSplit(
+        n_splits=1, test_size=val_size / (1 - test_size), random_state=seed
+    )
+    train_idx, val_idx = next(validation.split(train_val_idx, labels[train_val_idx]))
+
+    return train_val_idx[train_idx], train_val_idx[val_idx], test_idx

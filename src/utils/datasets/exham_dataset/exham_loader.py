@@ -78,6 +78,10 @@ class EXHAMDataset(BaseDataset):
         ]
         self.labels = self.data[self.label]
 
+        self.visual_features = torch.tensor(
+            self.data[self.visual_attributes].values, dtype=torch.float
+        )
+
         if augment:
             _, self.metadata_path = augment_dataset(self)
             self.load_metadata()  # Force metadata reload

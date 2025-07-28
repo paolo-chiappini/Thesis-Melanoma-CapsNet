@@ -3,6 +3,7 @@ import torch
 import os
 from tqdm import tqdm
 from datetime import datetime
+import numpy as np
 
 
 class BaseTrainer(ABC):
@@ -25,8 +26,44 @@ class BaseTrainer(ABC):
         self.device = device
         self.checkpoints_dir = checkpoints_dir
         self.save_name = save_name
+        self.class_weights = None
+        self.attribute_weights = None
 
         os.makedirs(checkpoints_dir, exist_ok=True)
+
+    def set_weights(self, weights_dict):
+        """
+        Set weight attributes from a dictionary.
+
+        Parameters:
+        - weights_dict: dict with keys like "class_weights", "attribute_weights".
+        """
+        if not isinstance(weights_dict, dict):
+            raise TypeError("weights_dict must be a dictionary")
+
+        valid_keys = {"class_weights", "attribute_weights"}
+
+        for key, value in weights_dict.items():
+            if key not in valid_keys:
+                raise KeyError(
+                    f"Invalid key '{key}' in weights_dict. Valid keys: {valid_keys}"
+                )
+
+            if key == "class_weights":
+                self.class_weights = self._to_tensor(value)
+            elif key == "attribute_weights":
+                self.attribute_weights = self._to_tensor(value)
+
+    def _to_tensor(self, value):
+        """
+        Convert weights to a torch tensor (float32).
+        """
+        if isinstance(value, torch.Tensor):
+            return value.float()
+        elif isinstance(value, (list, tuple, np.ndarray)):
+            return torch.tensor(value, dtype=torch.float32)
+        else:
+            raise TypeError(f"Unsupported weight type: {type(value)}")
 
     @abstractmethod
     def prepare_batch(self, batch):
@@ -66,6 +103,7 @@ class BaseTrainer(ABC):
         self.model.train()
         running_loss = 0.0
         loader = self.loaders[split]
+        all_metrics = []
 
         progress = tqdm(loader, desc=f"Train Epoch {epoch}")
         for i, batch in enumerate(progress):
@@ -90,14 +128,21 @@ class BaseTrainer(ABC):
                     },
                 )
 
+            metrics = self.compute_metrics(outputs, batch_data)
+            all_metrics.append(metrics)
+
+        avg_metrics = self._aggregate_metrics(all_metrics)
         if callback_manager:
+            logs = {
+                "loss": running_loss / len(loader),
+                "epoch": epoch,
+                "phase": split,
+            }
+            logs.update(avg_metrics)
+
             callback_manager.on_epoch_end(
                 epoch=epoch,
-                logs={
-                    "loss": running_loss / len(loader),
-                    "epoch": epoch,
-                    "phase": split,
-                },
+                logs=logs,
             )
 
         # TODO: remove

@@ -3,40 +3,18 @@ from models import get_model
 from trainers import get_trainer
 from utils.losses import get_loss
 from utils.callbacks import get_callbacks, CallbackManager
-from utils.commons import get_resize_transform
+from utils.commons import (
+    get_resize_transform,
+    compute_class_weights,
+    compute_binary_feature_weights,
+    stratified_split,
+)
 from config.device_config import get_device
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 from collections import Counter
-import numpy as np
-
-
-def compute_class_weights(class_counts, device):
-    counts = np.array(list(class_counts.values()), dtype=np.float32)
-    weights = 1.0 / counts
-    weights /= weights.sum()
-    return torch.tensor(weights).to(device)
-
-
-def stratified_split(labels, val_size=0.1, test_size=0.1, seed=123):
-    from sklearn.model_selection import StratifiedShuffleSplit
-
-    indices = np.arange(len(labels))
-    labels = np.array(labels)
-
-    # split holdout set
-    test = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=seed)
-    train_val_idx, test_idx = next(test.split(indices, labels))
-
-    # split train and validation
-    validation = StratifiedShuffleSplit(
-        n_splits=1, test_size=val_size / (1 - test_size), random_state=seed
-    )
-    train_idx, val_idx = next(validation.split(train_val_idx, labels[train_val_idx]))
-
-    return train_val_idx[train_idx], train_val_idx[val_idx], test_idx
 
 
 def run_training(config, model_path=None, cpu_override=False):
@@ -47,6 +25,11 @@ def run_training(config, model_path=None, cpu_override=False):
     callback_config = config.get("callbacks", [])
     system_config = config["system"]
 
+    has_visual_attributes = system_config.get("has_visual_attributes", False)
+    use_weighted_metrics = system_config.get("use_weighted_metrics", False)
+
+    weights = {}
+
     device, multi_gpu = get_device(cpu_override=cpu_override)
 
     transform = get_resize_transform(preprocess_config["img_size"])
@@ -55,6 +38,21 @@ def run_training(config, model_path=None, cpu_override=False):
     class_counts = Counter(dataset.labels)
     class_weights = compute_class_weights(class_counts, device)
     print(f"Class counts: {class_counts}, Class weights: {class_weights}")
+
+    weights["class_weights"] = class_weights
+
+    if has_visual_attributes:
+        attribute_counts_ones = torch.sum(dataset.visual_features, dim=0)
+        attribute_weights = compute_binary_feature_weights(
+            attribute_counts_ones, len(dataset), device
+        )
+
+        named_attribute_weights = dict(
+            zip(dataset.visual_attributes, attribute_weights.cpu().numpy())
+        )
+        print(f"Attribute weights: {named_attribute_weights}")
+
+        weights["attribute_weights"] = attribute_weights
 
     val_size = dataset_config.get("val_size", 0.1)
     test_size = dataset_config.get("test_size", 0.1)
@@ -107,6 +105,9 @@ def run_training(config, model_path=None, cpu_override=False):
         checkpoints_dir=system_config["save_path"],
         save_name=system_config["save_name"],
     )
+
+    if use_weighted_metrics:
+        trainer.set_weights(weights_dict=weights)
 
     callbacks = get_callbacks(callback_config)
     callback_manager = CallbackManager(callbacks=callbacks)

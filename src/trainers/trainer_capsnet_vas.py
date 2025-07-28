@@ -1,5 +1,6 @@
 from .trainer_base import BaseTrainer
 import torch
+from utils.commons import compute_weighted_accuracy
 
 _OUT_VAS_SCORES_IDX = 0
 _OUT_MALIGNANCY_SCORES_IDX = 2
@@ -32,12 +33,27 @@ class CapsNetTrainerVAs(BaseTrainer):
 
     def compute_metrics(self, outputs, batch_data):
         _, predicted = torch.max(outputs[_OUT_MALIGNANCY_SCORES_IDX], 1)
-        predicted_vas = outputs[_OUT_VAS_SCORES_IDX]
-        accuracy = (predicted == batch_data["labels"]).float().mean().item()
+        labels = batch_data["labels"].to(self.device)
 
-        predicted_vas = (predicted_vas >= _CORRECT_THRESHOLD).float()  # binarize
-        accuracy_vas = (
-            (predicted_vas == batch_data["visual_attributes"]).float().mean().item()
+        weighted_accuracy = compute_weighted_accuracy(
+            predicted=predicted,
+            target=labels,
+            weights=self.class_weights,
+            num_labels=outputs[_OUT_MALIGNANCY_SCORES_IDX].size(1),
         )
 
-        return {"accuracy": accuracy, "accuracy_vas": accuracy_vas}
+        predicted_vas = outputs[_OUT_VAS_SCORES_IDX]
+        predicted_vas = (predicted_vas >= _CORRECT_THRESHOLD).float()  # binarize
+        attributes = batch_data["visual_attributes"].to(self.device)
+
+        weighted_accuracy_vas = compute_weighted_accuracy(
+            predicted=predicted_vas,
+            target=attributes,
+            weights=self.attribute_weights,
+            num_labels=attributes.shape[1],
+        )
+
+        return {
+            "accuracy": weighted_accuracy,
+            "accuracy_vas": weighted_accuracy_vas,
+        }

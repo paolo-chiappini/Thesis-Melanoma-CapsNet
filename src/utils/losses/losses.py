@@ -91,10 +91,16 @@ class CapsuleLoss(nn.Module):
 
 
 class AttributeLoss(nn.Module):
-    def __init__(self, loss_lambda=1.0, loss_criterion=F.binary_cross_entropy):
+    def __init__(
+        self,
+        loss_lambda=1.0,
+        loss_criterion=F.binary_cross_entropy,
+        attribute_weights=None,
+    ):
         super(AttributeLoss, self).__init__()
         self.loss_lambda = loss_lambda
         self.loss_criterion = loss_criterion
+        self.attribute_weights = attribute_weights
 
     def forward(self, attribute_scores, attribute_targets):
         """
@@ -112,9 +118,19 @@ class AttributeLoss(nn.Module):
         attribute_scores = attribute_scores.clamp(
             0, 1
         )  # TODO: remove this, I don't like it
-        return self.loss_lambda * self.loss_criterion(
-            attribute_scores, attribute_targets
-        )
+        if self.attribute_weights is not None:
+            weights = torch.tensor(
+                self.attribute_weights, dtype=torch.float32, device=device
+            )
+            bce = F.binary_cross_entropy(
+                attribute_scores, attribute_targets, reduction="none"
+            )
+            weighted_bce = bce * weights
+            loss = weighted_bce.mean()
+        else:
+            loss = self.loss_criterion(attribute_scores, attribute_targets)
+
+        return self.loss_lambda * loss
 
 
 class SegmentationLoss(nn.Module):
@@ -212,6 +228,7 @@ class CombinedLoss(nn.Module):
     def __init__(
         self,
         class_weights=None,
+        attribute_weights=None,
         margin_loss_lambda=0.4,
         margin_loss_gamma=2.0,
         reconstruction_loss_scale=5e-4,
@@ -226,7 +243,9 @@ class CombinedLoss(nn.Module):
             focal_gamma=margin_loss_gamma,
             class_weights=class_weights,
         )
-        self.attribute_loss = AttributeLoss(loss_lambda=attribute_loss_lambda)
+        self.attribute_loss = AttributeLoss(
+            loss_lambda=attribute_loss_lambda, attribute_weights=attribute_weights
+        )
         self.malignancy_loss = MalignancyLoss(loss_lambda=malignancy_loss_lambda)
         self.segmentaion_loss = SegmentationLoss(loss_lamdba=segmentation_loss_lambda)
 
