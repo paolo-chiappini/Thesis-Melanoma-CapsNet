@@ -145,10 +145,6 @@ class BaseTrainer(ABC):
                 logs=logs,
             )
 
-        # TODO: remove
-        diff = outputs[0] - batch_data["visual_attributes"]
-        print(torch.round(diff * 100) / 100)
-
         return running_loss / len(loader)
 
     def evaluate(self, epoch, callback_manager=None, split="val"):

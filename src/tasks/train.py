@@ -117,3 +117,6 @@ def run_training(config, model_path=None, cpu_override=False):
         callback_manager=callback_manager,
     )
     print("=" * 10, "Run finished", "=" * 10)
+
+    # compute final metrics on validation set
+    trainer.test(split="val")

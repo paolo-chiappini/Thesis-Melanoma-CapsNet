@@ -5,9 +5,11 @@ dataset:
     image_extension: null
     augment: False
     batch_size: 16
+    val_size: 0.1
+    test_size: 0.8
 
 preprocess:
-    img_size: 282
+    img_size: 128
 
 model:
     name: ConvAutoencoder
@@ -24,7 +26,12 @@ trainer:
 callbacks:
     - name: PlotCallback
     - name: ReconstructionCallback
-      frequency: 3
+      frequency: 1
 
 system:
     seed: 123
+    save_name: model_AE_EXHAM_50epochs
+    save_path: ./checkpoints/
+
+evaluate:
+    split_size: 0.2

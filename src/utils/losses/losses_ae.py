@@ -27,6 +27,7 @@ class PerceptualLoss(nn.Module):
             target = F.interpolate(
                 input, size=self.resize_size, mode="bilinear", align_corners=False
             )
+        self.model = self.model.to(input.device)
         input_model = self.model(input)
         target_model = self.model(target)
         return F.l1_loss(input_model, target_model)
@@ -42,13 +43,10 @@ class AECompositeLoss(nn.Module):
         self.gamma = gamma
         self.perceptual = PerceptualLoss() if perceptual else None
         self.l1 = nn.L1Loss()
-        self.class_weights = (
-            torch.tensor(class_weights, dtype=torch.float32)
-            if class_weights is not None
-            else None
-        )
+        self.class_weights = class_weights if class_weights is not None else None
 
-    def forward(self, reconstruction, target):
+    def forward(self, outputs, target):
+        _, reconstruction = outputs
         l1_loss = self.l1(reconstruction, target)
 
         if self.class_weights is not None:
@@ -56,6 +54,7 @@ class AECompositeLoss(nn.Module):
             cw = self.class_weights.to(reconstruction.device)
             cw = cw.view(1, -1, 1, 1)  # shape for broadcasting
             l1_loss = l1_loss * cw
+            l1_loss = l1_loss.mean()
 
         ssim_loss = 1 - ssim(reconstruction, target, data_range=1.0, size_average=True)
         perceptual_loss = (
