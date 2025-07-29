@@ -26,7 +26,7 @@ class CapsNetTrainerVAs(BaseTrainer):
             torch.eye(len(malignancy_scores[0])).to(self.device)[
                 batch_data["labels"]
             ],  # one hot encoded labels
-            batch_data["inputs"][0],
+            batch_data["inputs"],
             reconstructions,
             batch_data["masks"],
         )
