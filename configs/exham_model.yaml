@@ -27,8 +27,8 @@ trainer:
     lr_decay: 0.96
     loss:
         name: CombinedLoss
-        reconstruction_loss_scale: 0.0
-        # attribute_loss_lambda: 1
+        reconstruction_loss_scale: 0.01
+        attribute_loss_lambda: 10.0
 
 callbacks:
     - name: PlotCallback
@@ -37,7 +37,7 @@ callbacks:
 
 system:
     seed: 123
-    save_name: model_CNWA32_40epochs_no_recon
+    save_name: testing
     save_path: ./checkpoints/
 
 perturbation:

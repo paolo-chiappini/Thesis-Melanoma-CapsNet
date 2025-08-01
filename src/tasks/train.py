@@ -4,22 +4,20 @@ from trainers import get_trainer
 from utils.losses import get_loss
 from utils.callbacks import get_callbacks, CallbackManager
 from utils.commons import (
-    get_resize_transform,
     compute_class_weights,
     compute_binary_feature_weights,
-    stratified_split,
+    build_dataloaders,
+    get_transforms,
 )
 from config.device_config import get_device
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Subset
 from collections import Counter
 
 
 def run_training(config, model_path=None, cpu_override=False):
     dataset_config = config["dataset"]
-    preprocess_config = config["preprocess"]
     model_config = config["model"]
     trainer_config = config["trainer"]
     callback_config = config.get("callbacks", [])
@@ -32,7 +30,9 @@ def run_training(config, model_path=None, cpu_override=False):
 
     device, multi_gpu = get_device(cpu_override=cpu_override)
 
-    transform = get_resize_transform(preprocess_config["img_size"])
+    transform = get_transforms(
+        config, is_train=dataset_config["augment"]
+    )  # is_train = False is a standard resize + normalization
     dataset = get_dataset(dataset_config, transform=transform)
 
     class_counts = Counter(dataset.labels)
@@ -54,40 +54,15 @@ def run_training(config, model_path=None, cpu_override=False):
 
         weights["attribute_weights"] = attribute_weights
 
-    val_size = dataset_config.get("val_size", 0.1)
-    test_size = dataset_config.get("test_size", 0.1)
-    train_idx, val_idx, test_idx = stratified_split(
-        dataset.labels,
-        val_size=val_size,
-        test_size=test_size,
-        seed=system_config["seed"],
-    )
-
-    train_dataset = Subset(dataset, train_idx)
-    val_dataset = Subset(dataset, val_idx)
-    test_dataset = Subset(dataset, test_idx)
-
-    print(
-        f"Dataset split -> Train: {len(train_dataset)}, Val: {len(val_dataset)}, Test: {len(test_dataset)}"
-    )
-
     num_workers = 0 if not multi_gpu else 2
 
     batch_size = dataset_config["batch_size"]
     if device.type == "cuda" and multi_gpu:
         batch_size *= torch.cuda.device_count()
 
-    loaders = {
-        "train": DataLoader(
-            train_dataset, batch_size, shuffle=True, num_workers=num_workers
-        ),
-        "val": DataLoader(
-            val_dataset, batch_size, shuffle=False, num_workers=num_workers
-        ),
-        "test": DataLoader(
-            test_dataset, batch_size, shuffle=False, num_workers=num_workers
-        ),
-    }
+    loaders = build_dataloaders(
+        config=config, dataset=dataset, batch_size=batch_size, num_workers=num_workers
+    )
 
     model = get_model(model_config, data_loader=loaders, device=device)
     model = model.to(device)

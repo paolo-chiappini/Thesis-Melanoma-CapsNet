@@ -177,6 +177,9 @@ class BaseTrainer(ABC):
                 metrics = self.compute_metrics(outputs, batch_data)
                 all_metrics.append(metrics)
 
+                # TODO: remove, may be used for visualization still (makes the segmentation comparison clearer)
+                masks = batch_data["masks"]
+
         avg_metrics = self._aggregate_metrics(all_metrics)
         if callback_manager:
             logs = {
@@ -193,7 +196,7 @@ class BaseTrainer(ABC):
 
             reconstructions = outputs[1]
             callback_manager.on_reconstruction(
-                images[:8], reconstructions[:8], epoch, split
+                images[:8] * masks[:8], reconstructions[:8], epoch, split
             )
         return running_loss / len(loader)
 

@@ -1,8 +1,12 @@
+import numpy as np
 from ..base_dataset import BaseDataset
 import os
 import torch
 from PIL import Image
-from .augmentations import augment_dataset
+import torchvision.transforms as T
+
+# TODO: make this better
+normalize_tranform = T.Compose([T.ToTensor()])
 
 
 class EXHAMDataset(BaseDataset):
@@ -82,14 +86,11 @@ class EXHAMDataset(BaseDataset):
             self.data[self.visual_attributes].values, dtype=torch.float
         )
 
-        if augment:
-            _, self.metadata_path = augment_dataset(self)
-            self.load_metadata()  # Force metadata reload
-            self.labels = self.data[self.label]
-
         self.load_segmentations = load_segmentations
         self.segmentations_path = "segmentations"
         self.segmentation_extension = "png"
+
+        self.augment = augment
 
         print("[EXHAM] Loaded dataset with", len(self.data), "rows")
 
@@ -126,10 +127,27 @@ class EXHAMDataset(BaseDataset):
         )
 
         if self.transform:
-            image = self.transform(image)
-            segmentation = (
-                self.transform(segmentation) if segmentation is not None else None
-            )
+            image_np = np.array(image).astype(np.uint8)
+            segmentation_np = (
+                np.array(segmentation) if segmentation is not None else None
+            ).astype(np.uint8)
+
+            transformed = self.transform(image=image_np, masks=[segmentation_np])
+            image = normalize_tranform(transformed["image"])
+            segmentation = normalize_tranform(transformed["masks"][0])
+
+            # transformed = self.transform(
+            #     image=image_np,
+            #     masks=[
+            #         segmentation_np
+            #     ],  # in case of attribute masks: [segmentation] + attribute_masks
+            # )
+
+            # image = transformed["image"]
+            # segmentation = transformed["masks"][0].unsqueeze(0)
+            # TODO: add attribute mask loading
+            # lesion_mask = masks[0]
+            # attribute_masks = troch.stack(masks[1:], dim=0)
 
         label = torch.tensor(label, dtype=torch.int)
         visual_features = record[self.visual_attributes].values.astype(float)
