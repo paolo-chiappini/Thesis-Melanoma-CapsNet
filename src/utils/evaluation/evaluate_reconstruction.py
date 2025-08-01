@@ -20,14 +20,17 @@ def evaluate_reconstruction(model, dataloader, device="cuda", prepare_batch=None
         for batch in tqdm(dataloader, desc="Evaluating reconstruction", unit="batch"):
             batch_dict = prepare_batch(batch)
             images = batch_dict["inputs"].to(device)
+            masked_images = images
+            if "masks" in batch_dict.keys():
+                masked_images = images * batch_dict["masks"]
 
             capsules = model.encode(images)
             recon = model.decode(capsules)
 
-            mse = F.mse_loss(recon, images, reduction="none").mean(dim=(1, 2, 3))
+            mse = F.mse_loss(recon, masked_images, reduction="none").mean(dim=(1, 2, 3))
             mse_losses.extend(mse.cpu().numpy())
 
-            images_np = images.permute(0, 2, 3, 1).cpu().numpy()
+            images_np = masked_images.permute(0, 2, 3, 1).cpu().numpy()
             recon_np = recon.permute(0, 2, 3, 1).cpu().numpy()
             for img, rec in tqdm(
                 zip(images_np, recon_np),
