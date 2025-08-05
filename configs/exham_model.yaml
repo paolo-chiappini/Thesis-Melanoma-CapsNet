@@ -36,6 +36,7 @@ callbacks:
 
 system:
     seed: 123
+    augment: True
     save_name: testing
     save_path: ./checkpoints/
 
