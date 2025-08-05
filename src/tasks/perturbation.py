@@ -1,7 +1,7 @@
 import os
 from utils.loaders import get_dataset
 from models import get_model
-from utils.commons import get_resize_transform, load_model
+from utils.commons import get_transforms, load_model
 from config.device_config import get_device
 import torch
 from torch.utils.data import DataLoader
@@ -39,13 +39,12 @@ def get_samples_from_classes(loader, num_samples=3, num_classes=2):
 def run_perturbation(config, model_path=None, cpu_override=False):
     visualization_config = config["perturbation"]
     dataset_config = config["dataset"]
-    preprocess_config = config["preprocess"]
     model_config = config["model"]
     system_config = config["system"]
 
     device, multi_gpu = get_device(cpu_override=cpu_override)
 
-    tranform = get_resize_transform(preprocess_config["img_size"])
+    tranform = get_transforms(config, is_train=False)
     dataset = get_dataset(dataset_config, transform=tranform)
 
     num_workers = 0 if not multi_gpu else 2

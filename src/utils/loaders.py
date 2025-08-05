@@ -17,7 +17,6 @@ def get_dataset(
     root = config["root"]
     metadata_path = config["metadata_path"]
     image_extension = config["image_extension"]
-    augment = config["augment"]
 
     if name not in DATASET_REGISTRY:
         raise ValueError(f"Dataset {name} not found in registry.")
@@ -27,5 +26,4 @@ def get_dataset(
         transform=transform,
         image_extension=image_extension,
         metadata_path=metadata_path,
-        augment=augment,
     )

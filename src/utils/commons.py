@@ -3,6 +3,10 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 import numpy as np
+from .datasets.augmentations import get_transforms
+from torch.utils.data import DataLoader, Subset
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 
 def get_all_subclasses(cls):
@@ -19,12 +23,6 @@ def get_classes_from_module(module_startswith, parent_class):
         for cls in get_all_subclasses(parent_class)
         if cls.__module__.startswith(module_startswith)
     }
-
-
-def get_resize_transform(size):
-    from torchvision import transforms as T
-
-    return T.Compose([T.Resize((size, size)), T.ToTensor()])
 
 
 def load_model(
@@ -114,3 +112,44 @@ def stratified_split(labels, val_size=0.1, test_size=0.1, seed=123):
     train_idx, val_idx = next(validation.split(train_val_idx, labels[train_val_idx]))
 
     return train_val_idx[train_idx], train_val_idx[val_idx], test_idx
+
+
+def build_dataloaders(config, dataset, batch_size, num_workers=0):
+    transform_val = get_transforms(config, is_train=False)
+
+    system_config = config["system"]
+    dataset_config = config["dataset"]
+
+    val_size = dataset_config.get("val_size", 0.1)
+    test_size = dataset_config.get("test_size", 0.1)
+    train_idx, val_idx, test_idx = stratified_split(
+        dataset.labels,
+        val_size=val_size,
+        test_size=test_size,
+        seed=system_config["seed"],
+    )
+
+    train_dataset = Subset(dataset, train_idx)
+    val_dataset = Subset(dataset, val_idx)
+    test_dataset = Subset(dataset, test_idx)
+
+    val_dataset.dataset.tranform = transform_val
+    test_dataset.dataset.tranform = transform_val
+
+    print(
+        f"Dataset split -> Train: {len(train_dataset)}, Val: {len(val_dataset)}, Test: {len(test_dataset)}"
+    )
+
+    loaders = {
+        "train": DataLoader(
+            train_dataset, batch_size, shuffle=True, num_workers=num_workers
+        ),
+        "val": DataLoader(
+            val_dataset, batch_size, shuffle=False, num_workers=num_workers
+        ),
+        "test": DataLoader(
+            test_dataset, batch_size, shuffle=False, num_workers=num_workers
+        ),
+    }
+
+    return loaders

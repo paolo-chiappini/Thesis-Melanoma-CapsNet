@@ -14,7 +14,6 @@ class ISICDataset(BaseDataset):
         transform=None,
         image_id="image_name",
         label="benign_malignant",
-        augment=False,
         load_segmentations=False,
     ):
         image_extension = image_extension if image_extension is not None else "jpg"

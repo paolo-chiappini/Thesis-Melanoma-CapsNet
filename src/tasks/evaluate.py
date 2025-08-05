@@ -3,7 +3,7 @@ from utils.loaders import get_dataset
 from models import get_model
 from trainers import get_trainer
 from utils.losses import get_loss
-from utils.commons import get_resize_transform, load_model
+from utils.commons import get_transforms, load_model
 from config.device_config import get_device
 import torch
 import torch.nn as nn
@@ -22,14 +22,13 @@ import numpy as np
 def run_evaluation(config, model_path=None, cpu_override=False):
     evaluation_config = config["evaluate"]
     dataset_config = config["dataset"]
-    preprocess_config = config["preprocess"]
     model_config = config["model"]
     trainer_config = config["trainer"]
     system_config = config["system"]
 
     device, multi_gpu = get_device(cpu_override=cpu_override)
 
-    tranform = get_resize_transform(preprocess_config["img_size"])
+    tranform = get_transforms(config=config, is_train=False)
     dataset = get_dataset(dataset_config, transform=tranform)
 
     labels = dataset.labels

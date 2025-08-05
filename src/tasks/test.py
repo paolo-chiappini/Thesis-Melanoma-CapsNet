@@ -2,7 +2,7 @@ from utils.loaders import get_dataset
 from models import get_model
 from trainers import get_trainer
 from utils.losses import get_loss
-from utils.commons import get_resize_transform, load_model
+from utils.commons import get_transforms, load_model
 from config.device_config import get_device
 
 import torch
@@ -41,14 +41,13 @@ def stratified_split(labels, val_size=0.1, test_size=0.1, seed=123):
 
 def run_testing(config, model_path=None, cpu_override=False):
     dataset_config = config["dataset"]
-    preprocess_config = config["preprocess"]
     model_config = config["model"]
     trainer_config = config["trainer"]
     system_config = config["system"]
 
     device, multi_gpu = get_device(cpu_override=cpu_override)
 
-    transform = get_resize_transform(preprocess_config["img_size"])
+    transform = get_transforms(config, is_train=False)
     dataset = get_dataset(dataset_config, transform=transform)
 
     class_counts = Counter(dataset.labels)
