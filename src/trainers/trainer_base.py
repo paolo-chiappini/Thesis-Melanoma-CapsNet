@@ -28,6 +28,7 @@ class BaseTrainer(ABC):
         self.save_name = save_name
         self.class_weights = None
         self.attribute_weights = None
+        self.early_stop = False
 
         os.makedirs(checkpoints_dir, exist_ok=True)
 
@@ -183,6 +184,7 @@ class BaseTrainer(ABC):
                 "loss": running_loss / len(loader),
                 "epoch": epoch,
                 "phase": split,
+                "model": self.model,
             }
             logs.update(avg_metrics)
 
@@ -190,6 +192,10 @@ class BaseTrainer(ABC):
                 epoch=epoch,
                 logs=logs,
             )
+
+            # check if an early stop signal has been raised
+            if not self.early_stop:
+                self.early_stop = logs.get("stop", False)
 
             reconstructions = outputs[1]
             callback_manager.on_reconstruction(
@@ -215,6 +221,11 @@ class BaseTrainer(ABC):
             print(
                 f"Epoch {epoch}: Train Loss {train_loss:.4f}, Val Loss {val_loss:.4f}"
             )
+
+            if self.early_stop:
+                print(f"🛑 Early stop at epoch {epoch}")
+                break
+
             if self.scheduler:
                 self.scheduler.step()
 
@@ -248,7 +259,9 @@ class BaseTrainer(ABC):
         avg_metrics = self._aggregate_metrics(all_metrics)
         avg_loss = running_loss / len(loader)
 
-        print(f"Test Results -> Loss: {avg_loss:.4f}, Metrics: {avg_metrics}")
+        print(
+            f"Test Results on {split} split -> Loss: {avg_loss:.4f}, Metrics: {avg_metrics}"
+        )
         return {"loss": avg_loss, **avg_metrics}
 
     def _aggregate_metrics(self, metrics_list):

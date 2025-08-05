@@ -2,6 +2,7 @@ from .callback import Callback
 from .callback_manager import CallbackManager
 from .callback_reconstruction import ReconstructionCallback
 from .callback_plot import PlotCallback
+from .callback_early_stopping import EarlyStoppingCallback
 
 callbacks = {cls.__name__: cls for cls in Callback.__subclasses__()}
 

@@ -5,8 +5,8 @@ dataset:
     image_extension: null
     augment: False
     batch_size: 32
-    val_size: 0.1
-    test_size: 0.1
+    val_size: 0.05
+    test_size: 0.9
 
 preprocess:
     img_size: 256
@@ -27,17 +27,21 @@ trainer:
     lr_decay: 0.96
     loss:
         name: CombinedLoss
-        reconstruction_loss_scale: 0.0
-        # attribute_loss_lambda: 1
+        # reconstruction_loss_scale: 0.0
+        attribute_loss_lambda: 10.0
 
 callbacks:
     - name: PlotCallback
     - name: ReconstructionCallback
       frequency: 3
+    - name: EarlyStoppingCallback
+      patience: 1
+      min_delta: 0.03
+      restore_best_weights: True
 
 system:
     seed: 123
-    save_name: model_CNWA32_40epochs_no_recon
+    save_name: testing_model
     save_path: ./checkpoints/
 
 perturbation:
