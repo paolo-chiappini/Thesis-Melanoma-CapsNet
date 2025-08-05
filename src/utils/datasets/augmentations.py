@@ -28,8 +28,7 @@ def get_val_augmentations(img_size):
 def get_transforms(config, is_train=True):
     img_size = config["preprocess"]["img_size"]
     augment = config["dataset"].get("augment", False)
-    # if is_train and augment:
-    if is_train:
+    if is_train and augment:
         return get_train_augmentations(img_size)
     else:
         return get_val_augmentations(img_size)

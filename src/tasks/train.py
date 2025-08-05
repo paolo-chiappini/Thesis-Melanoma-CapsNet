@@ -30,9 +30,7 @@ def run_training(config, model_path=None, cpu_override=False):
 
     device, multi_gpu = get_device(cpu_override=cpu_override)
 
-    transform = get_transforms(
-        config, is_train=dataset_config["augment"]
-    )  # is_train = False is a standard resize + normalization
+    transform = get_transforms(config, is_train=True)
     dataset = get_dataset(dataset_config, transform=transform)
 
     class_counts = Counter(dataset.labels)

@@ -18,7 +18,6 @@ class EXHAMDataset(BaseDataset):
         transform=None,
         image_id="image_id",
         label="benign_malignant",
-        augment=False,
         load_segmentations=True,
     ):
         image_extension = image_extension if image_extension is not None else "jpg"
@@ -89,8 +88,6 @@ class EXHAMDataset(BaseDataset):
         self.load_segmentations = load_segmentations
         self.segmentations_path = "segmentations"
         self.segmentation_extension = "png"
-
-        self.augment = augment
 
         print("[EXHAM] Loaded dataset with", len(self.data), "rows")
 
