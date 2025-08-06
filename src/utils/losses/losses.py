@@ -152,7 +152,6 @@ class SegmentationLoss(nn.Module):
         Returns:egmentation loss.
         - loss: Computed loss value
         """
-        segmentations = torch.sigmoid(segmentations)
         bce_loss = self.bce(segmentations, segmentations_targets)
         intersection = (segmentations * segmentations_targets).sum(dim=(1, 2, 3))
         dice = (2.0 * intersection + self.smooth) / (
@@ -348,9 +347,20 @@ class CombinedLoss(nn.Module):
             malignancy_scores, targets, images, reconstructions, masks
         )
         attribute_loss = self.attribute_loss(capsule_outputs, attribute_targets)
-        # malignancy_loss = self.malignancy_loss # Not implemented
+        malignancy_loss = self.malignancy_loss(malignancy_scores, targets)
+
+        reconstructions_masks = (
+            (reconstructions.norm(dim=1) > 0).float().unsqueeze(1)
+        )  # convert reconstructions to binary masks
+        segmentation_loss = self.segmentaion_loss(reconstructions_masks, masks)
 
         tc_loss = self.tc_loss(capsule_outputs)
 
-        total_loss = capsule_loss + attribute_loss + tc_loss
+        total_loss = (
+            capsule_loss
+            + attribute_loss
+            + tc_loss
+            + malignancy_loss
+            + segmentation_loss
+        )
         return total_loss
