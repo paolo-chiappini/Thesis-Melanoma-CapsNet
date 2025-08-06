@@ -26,13 +26,13 @@ trainer:
     lr_decay: 0.96
     loss:
         name: CombinedLoss
-        margin_loss_lambda: 0.5 # Capsule margin loss balance
-        margin_loss_gamma: 2.0 # Focal term, common starting value
-        reconstruction_loss_scale: 0.0005 # Lowered to avoid dominating others
-        attribute_loss_lambda: 10.0 # Main classification task
-        malignancy_loss_lambda: 0.5 # Secondary classificaiton task
+        margin_loss_lambda: 0 # Capsule margin loss balance
+        margin_loss_gamma: 0 # Focal term, common starting value
+        reconstruction_loss_scale: 0.00001 # Lowered to avoid dominating others
+        attribute_loss_lambda: 1.0 # Main classification task
+        malignancy_loss_lambda: 1.0 # Secondary classificaiton task
         segmentation_loss_lambda: 0 # Often scaled up because segmentation losses tend to be smaller in magnitude
-        tc_loss_beta: 0.1 # Total correlation loss usually small to avoid over-regularizing
+        tc_loss_beta: 0.05 # Total correlation loss usually small to avoid over-regularizing
 
 callbacks:
     - name: PlotCallback
@@ -46,7 +46,7 @@ callbacks:
 system:
     seed: 123
     augment: True
-    save_name: testing_softmax
+    save_name: testing_no_margin_loss
     save_path: ./checkpoints/
 
 perturbation:
