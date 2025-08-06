@@ -304,7 +304,7 @@ class TotalCorrelationLoss(nn.Module):
 
         tc_loss = torch.mean(log_q_z_given_x - sum_log_q_z_j)
 
-        return tc_loss
+        return tc_loss * self.loss_beta
 
 
 class CombinedLoss(nn.Module):
@@ -318,6 +318,7 @@ class CombinedLoss(nn.Module):
         attribute_loss_lambda=1.0,
         malignancy_loss_lambda=1.0,
         segmentation_loss_lambda=1.0,
+        tc_loss_beta=1.0,
     ):
         super(CombinedLoss, self).__init__()
         self.capsule_loss = CapsuleLoss(
@@ -331,7 +332,7 @@ class CombinedLoss(nn.Module):
         )
         self.malignancy_loss = MalignancyLoss(loss_lambda=malignancy_loss_lambda)
         self.segmentaion_loss = SegmentationLoss(loss_lamdba=segmentation_loss_lambda)
-        self.tc_loss = TotalCorrelationLoss()
+        self.tc_loss = TotalCorrelationLoss(loss_beta=tc_loss_beta)
 
     def forward(
         self,
