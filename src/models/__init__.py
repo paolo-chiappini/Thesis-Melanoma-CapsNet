@@ -4,6 +4,7 @@ from utils.commons import get_classes_from_module
 from .model_base_capsnet import CapsuleNetworkBase
 from .model_conv_attributes_32 import CapsuleNetworkWithAttributes32
 from .autoencoder import ConvAutoencoder
+from .model_conv_va_small import CapsuleNetworkWithAttributesSmall
 
 
 def get_model(config, data_loader, device):
