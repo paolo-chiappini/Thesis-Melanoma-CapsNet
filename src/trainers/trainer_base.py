@@ -181,6 +181,8 @@ class BaseTrainer(ABC):
                         },
                     )
 
+                self._update_metrics(outputs, batch_data)
+
                 # TODO: remove, may be used for visualization still (makes the segmentation comparison clearer)
                 masks = batch_data["masks"]
 
