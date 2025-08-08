@@ -1,4 +1,8 @@
-from torchmetrics.classification import BinaryF1Score, BinaryPrecision, BinaryRecall
+from torchmetrics.classification import (
+    BinaryF1Score,
+    BinaryPrecision,
+    BinaryRecall,
+)
 
 
 def build_metrics(metrics_config, num_attributes, device="cuda"):

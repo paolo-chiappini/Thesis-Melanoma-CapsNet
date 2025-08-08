@@ -31,7 +31,7 @@ class CapsNetTrainerVAs(BaseTrainer):
             batch_data["masks"],
         )
 
-    def compute_metrics(self, outputs, batch_data):
+    def compute_custom_metrics(self, outputs, batch_data):
         _, predicted = torch.max(outputs[_OUT_MALIGNANCY_SCORES_IDX], 1)
         labels = batch_data["labels"].to(self.device)
 

@@ -28,6 +28,8 @@ class BaseTrainer(ABC):
         self.checkpoints_dir = checkpoints_dir
         self.save_name = save_name
         self.metrics = metrics or {}
+        self.class_weights = None
+        self.attribute_weights = None
         self.early_stop = False
 
         os.makedirs(checkpoints_dir, exist_ok=True)
@@ -83,6 +85,17 @@ class BaseTrainer(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def compute_custom_metrics(self, outputs, batch_data):
+        """
+        Computes model-specific evaluation metrics
+
+        Args:
+            outputs (Tuple): outputs of the model
+            batch_data (Tuple): data of the current batch
+        """
+        pass
+
     def _reset_metrics(self):
         for metric in self.metrics.values():
             metric.reset()
@@ -98,14 +111,40 @@ class BaseTrainer(ABC):
             else:
                 metric.update(preds, targets)
 
-    def _compute_metrics(self):
-        return {name: m.compute().item() for name, m in self.metrics.items()}
+    def _compute_metrics(self, outputs=None, batch_data=None):
+        """
+        Compute metrics from TorchMetrics and optional subclass `compute_metrics`.
+        """
+        metrics_dict = {name: m.compute().item() for name, m in self.metrics.items()}
+
+        # If subclass has its own compute_metrics method
+        if hasattr(self, "compute_metrics") and callable(
+            getattr(self, "compute_metrics")
+        ):
+            if outputs is not None and batch_data is not None:
+                custom_metrics = super().compute_metrics(outputs, batch_data)
+                metrics_dict.update(custom_metrics)
+
+        return metrics_dict
+
+    def _aggregate_metrics(self, metrics_list):
+        """
+        Aggregates a list of metrics dictionaries into averages.
+        """
+        if not metrics_list:
+            return {}
+
+        aggregated = {}
+        for key in metrics_list[0]:
+            aggregated[key] = sum(m[key] for m in metrics_list) / len(metrics_list)
+        return aggregated
 
     def train_one_epoch(self, epoch, callback_manager=None, split="train"):
         assert split in self.loaders, f"'{split}' loader not found in self.loaders."
 
         self.model.train()
         self._reset_metrics()
+        all_custom_metrics = []
         running_loss = 0.0
         loader = self.loaders[split]
 
@@ -129,6 +168,11 @@ class BaseTrainer(ABC):
 
             self._update_metrics(outputs, batch_data)
 
+            if hasattr(self, "compute_custom_metrics"):
+                all_custom_metrics.append(
+                    self.compute_custom_metrics(outputs, batch_data)
+                )
+
             if callback_manager:
                 callback_manager.on_batch_end(
                     batch=i,
@@ -139,7 +183,10 @@ class BaseTrainer(ABC):
                     },
                 )
 
-        avg_metrics = self._compute_metrics()
+        tm_metrics = self._compute_metrics()
+        avg_custom_metrics = self._aggregate_metrics(all_custom_metrics)
+        avg_metrics = {**tm_metrics, **avg_custom_metrics}
+
         if callback_manager:
             logs = {
                 "loss": running_loss / len(loader),
@@ -160,6 +207,7 @@ class BaseTrainer(ABC):
 
         self.model.eval()
         self._reset_metrics()
+        all_custom_metrics = []
         running_loss = 0.0
         loader = self.loaders[split]
 
@@ -183,10 +231,18 @@ class BaseTrainer(ABC):
 
                 self._update_metrics(outputs, batch_data)
 
+                if hasattr(self, "compute_custom_metrics"):
+                    all_custom_metrics.append(
+                        self.compute_custom_metrics(outputs, batch_data)
+                    )
+
                 # TODO: remove, may be used for visualization still (makes the segmentation comparison clearer)
                 masks = batch_data["masks"]
 
-        avg_metrics = self._compute_metrics()
+        tm_metrics = self._compute_metrics()
+        avg_custom_metrics = self._aggregate_metrics(all_custom_metrics)
+        avg_metrics = {**tm_metrics, **avg_custom_metrics}
+
         if callback_manager:
             logs = {
                 "loss": running_loss / len(loader),
@@ -243,6 +299,7 @@ class BaseTrainer(ABC):
 
         self.model.eval()
         self._reset_metrics()
+        all_custom_metrics = []
         running_loss = 0.0
 
         loader = self.loaders[split]
@@ -256,8 +313,18 @@ class BaseTrainer(ABC):
 
                 self._update_metrics(outputs, batch_data)
 
+                if hasattr(self, "compute_custom_metrics"):
+                    all_custom_metrics.append(
+                        self.compute_custom_metrics(outputs, batch_data)
+                    )
+
         results = {"loss": running_loss / len(loader)}
-        results.update(self._compute_metrics())
+
+        tm_metrics = self._compute_metrics()
+        avg_custom_metrics = self._aggregate_metrics(all_custom_metrics)
+        avg_metrics = {**tm_metrics, **avg_custom_metrics}
+
+        results.update(avg_metrics)
 
         print(f"Test Results on {split} split -> {results}")
         return results

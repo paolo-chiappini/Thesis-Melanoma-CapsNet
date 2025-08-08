@@ -16,7 +16,7 @@ class AutoEncoderTrainer(BaseTrainer):
     def compute_loss(self, outputs, batch_data):
         return self.criterion(outputs, batch_data["targets"])
 
-    def compute_metrics(self, outputs, batch_data):
+    def compute_custom_metrics(self, outputs, batch_data):
         targets = batch_data["targets"]
         _, preds = outputs
 
