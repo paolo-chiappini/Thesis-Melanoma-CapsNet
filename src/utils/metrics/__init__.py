@@ -15,7 +15,7 @@ def build_metrics(metrics_config, num_attributes, device="cuda"):
             # create metric for each attribute
             for i in range(num_attributes):
                 metrics[f"{m['type']}_attr_{i}"] = metric_cls().to(device)
-            else:
-                # create aggregate metric
-                metrics[m["type"]] = metric_cls()
+        else:
+            # create aggregate metric
+            metrics[m["type"]] = metric_cls().to(device)
     return metrics
