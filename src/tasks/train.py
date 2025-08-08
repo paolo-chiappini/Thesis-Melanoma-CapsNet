@@ -70,7 +70,7 @@ def run_training(config, model_path=None, cpu_override=False):
     loss_criterion = get_loss(trainer_config["loss"], class_weights)
 
     trainer = get_trainer(
-        trainer_config,
+        config,
         model,
         loaders,
         loss_criterion,

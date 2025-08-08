@@ -72,7 +72,7 @@ def run_evaluation(config, model_path=None, cpu_override=False):
 
     loss_criterion = get_loss(trainer_config["loss"], None)
     trainer = get_trainer(
-        trainer_config,
+        config,
         model,
         loader,
         loss_criterion,

@@ -356,11 +356,17 @@ class CombinedLoss(nn.Module):
 
         tc_loss = self.tc_loss(capsule_outputs)
 
-        total_loss = (
-            capsule_loss
-            + attribute_loss
-            + tc_loss
-            + malignancy_loss
-            + segmentation_loss
-        )
-        return total_loss
+        # total_loss = (
+        #     capsule_loss
+        #     + attribute_loss
+        #     + tc_loss
+        #     + malignancy_loss
+        #     + segmentation_loss
+        # )
+        return {
+            "capsule_loss": capsule_loss,
+            "attribute_loss": attribute_loss,
+            "tc_loss": tc_loss,
+            "malignancy_loss": malignancy_loss,
+            "segmentation_loss": segmentation_loss,
+        }

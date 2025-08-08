@@ -17,8 +17,9 @@ class BaseTrainer(ABC):
         device="cuda",
         checkpoints_dir="checkpoints",
         save_name=None,
+        metrics=None,  # dictionary of torchmetrics
     ):
-        self.model = model
+        self.model = model.to(device)
         self.loaders = loaders
         self.criterion = criterion
         self.optimizer = optimizer
@@ -26,8 +27,7 @@ class BaseTrainer(ABC):
         self.device = device
         self.checkpoints_dir = checkpoints_dir
         self.save_name = save_name
-        self.class_weights = None
-        self.attribute_weights = None
+        self.metrics = metrics or {}
         self.early_stop = False
 
         os.makedirs(checkpoints_dir, exist_ok=True)
@@ -49,11 +49,7 @@ class BaseTrainer(ABC):
                 raise KeyError(
                     f"Invalid key '{key}' in weights_dict. Valid keys: {valid_keys}"
                 )
-
-            if key == "class_weights":
-                self.class_weights = self._to_tensor(value)
-            elif key == "attribute_weights":
-                self.attribute_weights = self._to_tensor(value)
+            setattr(self, key, self._to_tensor(value))
 
     def _to_tensor(self, value):
         """
@@ -87,24 +83,31 @@ class BaseTrainer(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
-    def compute_metrics(self, outputs, batch_data):
-        """
-        Computes model-specific evaluation metrics
+    def _reset_metrics(self):
+        for metric in self.metrics.values():
+            metric.reset()
 
-        Args:
-            outputs (Tuple): outputs of the model
-            batch_data (Tuple): data of the current batch
-        """
-        raise NotImplementedError
+    def _update_metrics(self, outputs, batch_data):
+        preds = torch.sigmoid(outputs[0]) > 0.5
+        preds = preds.int()
+        targets = batch_data["visual_attributes"].int()
+        for name, metric in self.metrics.items():
+            if "attr_" in name:
+                idx = int(name.split("_")[-1])
+                metric.update(preds[:, idx], targets[:, idx])
+            else:
+                metric.update(preds, targets)
+
+    def _compute_metrics(self):
+        return {name: m.compute().item() for name, m in self.metrics.items()}
 
     def train_one_epoch(self, epoch, callback_manager=None, split="train"):
         assert split in self.loaders, f"'{split}' loader not found in self.loaders."
 
         self.model.train()
+        self._reset_metrics()
         running_loss = 0.0
         loader = self.loaders[split]
-        all_metrics = []
 
         progress = tqdm(loader, desc=f"Train Epoch {epoch}")
         for i, batch in enumerate(progress):
@@ -112,12 +115,19 @@ class BaseTrainer(ABC):
             self.optimizer.zero_grad()
 
             outputs = self.model(batch_data["inputs"])
-            loss = self.compute_loss(outputs, batch_data)
-            loss.backward()
+            losses = self.compute_loss(outputs, batch_data)
+            total_loss = sum(losses.values())
+            total_loss.backward()
             self.optimizer.step()
 
-            running_loss += loss.item()
+            running_loss += total_loss.item()
             progress.set_postfix(loss=running_loss / (i + 1))
+
+            # TODO: wrap in debug statement
+            loss_log = {k: v.item() for k, v in losses.items()}
+            print(f"[Epoch {epoch} | Batch {i}] Loss components: {loss_log}")
+
+            self._update_metrics(outputs, batch_data)
 
             if callback_manager:
                 callback_manager.on_batch_end(
@@ -129,10 +139,7 @@ class BaseTrainer(ABC):
                     },
                 )
 
-            metrics = self.compute_metrics(outputs, batch_data)
-            all_metrics.append(metrics)
-
-        avg_metrics = self._aggregate_metrics(all_metrics)
+        avg_metrics = self._compute_metrics()
         if callback_manager:
             logs = {
                 "loss": running_loss / len(loader),
@@ -152,18 +159,17 @@ class BaseTrainer(ABC):
         assert split in self.loaders, f"'{split}' loader not found in self.loaders."
 
         self.model.eval()
+        self._reset_metrics()
         running_loss = 0.0
-        all_metrics = []
         loader = self.loaders[split]
-        images = []
 
         with torch.no_grad():
             for i, batch in enumerate(loader):
                 batch_data = self.prepare_batch(batch)
                 images = batch_data["inputs"]
                 outputs = self.model(images)
-                loss = self.compute_loss(outputs, batch_data)
-                running_loss += loss.item()
+                losses = self.compute_loss(outputs, batch_data)
+                running_loss += sum(losses.values()).item()
 
                 if callback_manager:
                     callback_manager.on_batch_end(
@@ -175,13 +181,10 @@ class BaseTrainer(ABC):
                         },
                     )
 
-                metrics = self.compute_metrics(outputs, batch_data)
-                all_metrics.append(metrics)
-
                 # TODO: remove, may be used for visualization still (makes the segmentation comparison clearer)
                 masks = batch_data["masks"]
 
-        avg_metrics = self._aggregate_metrics(all_metrics)
+        avg_metrics = self._compute_metrics()
         if callback_manager:
             logs = {
                 "loss": running_loss / len(loader),
@@ -196,9 +199,7 @@ class BaseTrainer(ABC):
                 logs=logs,
             )
 
-            # check if an early stop signal has been raised
-            if not self.early_stop:
-                self.early_stop = logs.get("stop", False)
+            self.early_stop = self.early_stop or logs.get("stop", False)
 
             reconstructions = outputs[1]
             callback_manager.on_reconstruction(
@@ -215,8 +216,6 @@ class BaseTrainer(ABC):
         print(f"Model {name} saved at location {output_dir}")
 
     def run(self, epochs, callback_manager=None):
-        print(callback_manager)
-
         for epoch in range(1, epochs + 1):
             train_loss = self.train_one_epoch(epoch, callback_manager)
             val_loss = self.evaluate(epoch, callback_manager)
@@ -241,8 +240,8 @@ class BaseTrainer(ABC):
         assert split in self.loaders, f"'{split}' loader not found in self.loaders."
 
         self.model.eval()
+        self._reset_metrics()
         running_loss = 0.0
-        all_metrics = []
 
         loader = self.loaders[split]
         with torch.no_grad():
@@ -250,31 +249,13 @@ class BaseTrainer(ABC):
                 batch_data = self.prepare_batch(batch)
                 outputs = self.model(batch_data["inputs"])
 
-                # compute loss
-                loss = self.compute_loss(outputs, batch_data)
-                running_loss += loss.item()
+                losses = self.compute_loss(outputs, batch_data)
+                running_loss += sum(losses.values()).item()
 
-                # compute metrics
-                metrics = self.compute_metrics(outputs, batch_data)
-                all_metrics.append(metrics)
+                self._update_metrics(outputs, batch_data)
 
-        # aggregate metrics (assuming metrics are dicts)
-        avg_metrics = self._aggregate_metrics(all_metrics)
-        avg_loss = running_loss / len(loader)
+        results = {"loss": running_loss / len(loader)}
+        results.update(self._compute_metrics())
 
-        print(
-            f"Test Results on {split} split -> Loss: {avg_loss:.4f}, Metrics: {avg_metrics}"
-        )
-        return {"loss": avg_loss, **avg_metrics}
-
-    def _aggregate_metrics(self, metrics_list):
-        """
-        Aggregates a list of metrics dictionaries into averages.
-        """
-        if not metrics_list:
-            return {}
-
-        aggregated = {}
-        for key in metrics_list[0]:
-            aggregated[key] = sum(m[key] for m in metrics_list) / len(metrics_list)
-        return aggregated
+        print(f"Test Results on {split} split -> {results}")
+        return results
