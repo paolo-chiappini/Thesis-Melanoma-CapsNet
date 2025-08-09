@@ -95,13 +95,18 @@ class AttributeLoss(nn.Module):
     def __init__(
         self,
         loss_lambda=1.0,
-        loss_criterion=F.binary_cross_entropy,
+        loss_criterion=F.binary_cross_entropy_with_logits,
         attribute_weights=None,
     ):
         super(AttributeLoss, self).__init__()
         self.loss_lambda = loss_lambda
         self.loss_criterion = loss_criterion
-        self.attribute_weights = attribute_weights
+        self.attribute_weights = None
+
+        if attribute_weights is not None:
+            self.attribute_weights = torch.tensor(
+                attribute_weights, dtype=torch.float32
+            )
 
     def forward(self, attribute_scores, attribute_targets):
         """
@@ -116,20 +121,12 @@ class AttributeLoss(nn.Module):
         """
         device = attribute_scores.device
         attribute_targets = attribute_targets.to(device)
-        attribute_scores = attribute_scores.clamp(
-            0, 1
-        )  # TODO: remove this, I don't like it
-        if self.attribute_weights is not None:
-            weights = torch.tensor(
-                self.attribute_weights, dtype=torch.float32, device=device
-            )
-            bce = F.binary_cross_entropy(
-                attribute_scores, attribute_targets, reduction="none"
-            )
-            weighted_bce = bce * weights
-            loss = weighted_bce.mean()
-        else:
-            loss = self.loss_criterion(attribute_scores, attribute_targets)
+
+        loss = self.loss_criterion(
+            attribute_scores,
+            attribute_targets,
+            pos_weight=self.attribute_weights,
+        )
 
         return self.loss_lambda * loss
 

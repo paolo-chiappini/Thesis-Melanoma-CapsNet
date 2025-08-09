@@ -67,7 +67,11 @@ def run_training(config, model_path=None, cpu_override=False):
     if multi_gpu:
         model = nn.DataParallel(model)
 
-    loss_criterion = get_loss(trainer_config["loss"], class_weights)
+    loss_criterion = get_loss(
+        config=trainer_config["loss"],
+        class_weights=weights["class_weights"],
+        attribute_weights=weights["attribute_weights"],
+    )
 
     trainer = get_trainer(
         config,

@@ -48,6 +48,15 @@ system:
     augment: True
     save_name: baseline_only_attrs
     save_path: ./checkpoints/
+    has_visual_attributes: True
+
+metrics:
+    - type: f1
+      per_attribute: True
+    - type: precision
+      per_attribute: True
+    - type: recall
+      per_attribute: True
 
 perturbation:
     num_samples: 2
