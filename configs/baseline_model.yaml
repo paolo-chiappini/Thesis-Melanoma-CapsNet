@@ -5,7 +5,7 @@ dataset:
     image_extension: null
     batch_size: 32
     val_size: 0.1
-    test_size: 0.8
+    test_size: 0.1
 
 preprocess:
     img_size: 256
@@ -54,8 +54,9 @@ metrics:
 system:
     seed: 123
     augment: True
-    save_name: testing_model # testing_new_metrics
+    save_name: baseline_model_FIXED
     save_path: ./checkpoints/
+    has_visual_attributes: True
 
 perturbation:
     num_samples: 2

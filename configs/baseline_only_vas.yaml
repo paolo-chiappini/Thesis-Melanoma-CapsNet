@@ -43,13 +43,6 @@ callbacks:
       min_delta: 0.03
       restore_best_weights: True
 
-system:
-    seed: 123
-    augment: True
-    save_name: baseline_only_attrs
-    save_path: ./checkpoints/
-    has_visual_attributes: True
-
 metrics:
     - type: f1
       per_attribute: True
@@ -57,6 +50,13 @@ metrics:
       per_attribute: True
     - type: recall
       per_attribute: True
+
+system:
+    seed: 123
+    augment: True
+    save_name: baseline_model_only_vas_FIXED
+    save_path: ./checkpoints/
+    has_visual_attributes: True
 
 perturbation:
     num_samples: 2
