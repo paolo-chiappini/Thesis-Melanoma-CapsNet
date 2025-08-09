@@ -97,6 +97,7 @@ class AttributeLoss(nn.Module):
         loss_lambda=1.0,
         loss_criterion=F.binary_cross_entropy_with_logits,
         attribute_weights=None,
+        **kwargs
     ):
         super(AttributeLoss, self).__init__()
         self.loss_lambda = loss_lambda

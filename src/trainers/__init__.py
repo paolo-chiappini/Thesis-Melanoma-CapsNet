@@ -5,6 +5,7 @@ from utils.metrics import build_metrics
 from .trainer_base import BaseTrainer
 from .trainer_capsnet_vas import CapsNetTrainerVAs
 from .trainer_autoencoder import AutoEncoderTrainer
+from .trainer_sanity_check import SanityCheckTrainer
 
 
 def get_trainer(

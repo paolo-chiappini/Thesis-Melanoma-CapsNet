@@ -1,0 +1,53 @@
+dataset:
+    name: EXHAMDataset
+    root: ./data/EXHAMDataset
+    metadata_path: null
+    image_extension: null
+    batch_size: 32
+    val_size: 0.1
+    test_size: 0.1
+
+preprocess:
+    img_size: 256
+
+model:
+    name: SanityCheckModel
+    num_classes: 7
+
+trainer:
+    name: SanityCheckTrainer
+    epochs: 70
+    learning_rate: 0.001
+    lr_decay: 0.96
+    loss:
+        name: AttributeLoss
+
+callbacks:
+    - name: PlotCallback
+    - name: EarlyStoppingCallback
+      patience: 10
+      min_delta: 0.03
+      restore_best_weights: True
+
+metrics:
+    - type: f1
+      per_attribute: True
+    - type: precision
+      per_attribute: True
+    - type: recall
+      per_attribute: True
+
+system:
+    seed: 123
+    augment: True
+    save_name: sanity_check_resnet18
+    save_path: ./checkpoints/
+    has_visual_attributes: True
+    use_weighted_metrics: False
+
+perturbation:
+    num_samples: 2
+    is_global: True
+
+evaluate:
+    split_size: 0.2

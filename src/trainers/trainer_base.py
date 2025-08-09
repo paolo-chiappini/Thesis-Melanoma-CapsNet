@@ -75,6 +75,16 @@ class BaseTrainer(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def unpack_model_outputs(self, outputs):
+        """
+        Unpacks the outputs of the model.
+
+        Args:
+            outputs (Tuple): Tuple of items returned by the model forward method.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def compute_loss(self, outputs, batch_data):
         """
         Computes model-specific loss
@@ -101,7 +111,9 @@ class BaseTrainer(ABC):
             metric.reset()
 
     def _update_metrics(self, outputs, batch_data):
-        preds = torch.sigmoid(outputs[0]) > 0.5
+        outputs_dict = self.unpack_model_outputs(outputs)
+
+        preds = torch.sigmoid(outputs_dict["preds"]) > 0.5
         preds = preds.int()
         targets = batch_data["visual_attributes"].int()
         for name, metric in self.metrics.items():
@@ -155,6 +167,7 @@ class BaseTrainer(ABC):
 
             outputs = self.model(batch_data["inputs"])
             losses = self.compute_loss(outputs, batch_data)
+            losses = losses if isinstance(losses, dict) else {"loss": losses}
             total_loss = sum(losses.values())
             total_loss.backward()
             self.optimizer.step()
@@ -216,7 +229,9 @@ class BaseTrainer(ABC):
                 batch_data = self.prepare_batch(batch)
                 images = batch_data["inputs"]
                 outputs = self.model(images)
+                outputs_dict = self.unpack_model_outputs(outputs)
                 losses = self.compute_loss(outputs, batch_data)
+                losses = losses if isinstance(losses, dict) else {"loss": losses}
                 running_loss += sum(losses.values()).item()
 
                 if callback_manager:
@@ -259,10 +274,13 @@ class BaseTrainer(ABC):
 
             self.early_stop = self.early_stop or logs.get("stop", False)
 
-            reconstructions = outputs[1]
-            callback_manager.on_reconstruction(
-                images[:8] * masks[:8], reconstructions[:8], epoch, split
-            )
+            if "reconstructions" in outputs_dict:
+                callback_manager.on_reconstruction(
+                    images[:8] * masks[:8],
+                    outputs_dict["reconstructions"][:8],
+                    epoch,
+                    split,
+                )
         return running_loss / len(loader)
 
     def save_checkpoint(self, name=None):
@@ -309,6 +327,7 @@ class BaseTrainer(ABC):
                 outputs = self.model(batch_data["inputs"])
 
                 losses = self.compute_loss(outputs, batch_data)
+                losses = losses if isinstance(losses, dict) else {"loss": losses}
                 running_loss += sum(losses.values()).item()
 
                 self._update_metrics(outputs, batch_data)

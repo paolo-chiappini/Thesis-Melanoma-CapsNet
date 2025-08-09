@@ -2,9 +2,7 @@ from .trainer_base import BaseTrainer
 import torch
 from utils.commons import compute_weighted_accuracy
 
-_OUT_VAS_SCORES_IDX = 0
-_OUT_MALIGNANCY_SCORES_IDX = 2
-_CORRECT_THRESHOLD = 0.75
+_CORRECT_THRESHOLD = 0.5
 
 
 class CapsNetTrainerVAs(BaseTrainer):
@@ -32,17 +30,19 @@ class CapsNetTrainerVAs(BaseTrainer):
         )
 
     def compute_custom_metrics(self, outputs, batch_data):
-        _, predicted = torch.max(outputs[_OUT_MALIGNANCY_SCORES_IDX], 1)
+        outputs_dict = self.unpack_model_outputs(outputs)
+
+        _, predicted = torch.max(outputs_dict["malignancy"], 1)
         labels = batch_data["labels"].to(self.device)
 
         weighted_accuracy = compute_weighted_accuracy(
             predicted=predicted,
             target=labels,
             weights=self.class_weights,
-            num_labels=outputs[_OUT_MALIGNANCY_SCORES_IDX].size(1),
+            num_labels=outputs_dict["malignancy"].size(1),
         )
 
-        predicted_vas = outputs[_OUT_VAS_SCORES_IDX]
+        predicted_vas = outputs_dict["preds"]
         predicted_vas = (predicted_vas >= _CORRECT_THRESHOLD).float()  # binarize
         attributes = batch_data["visual_attributes"].to(self.device)
 
@@ -56,4 +56,13 @@ class CapsNetTrainerVAs(BaseTrainer):
         return {
             "accuracy": weighted_accuracy,
             "accuracy_vas": weighted_accuracy_vas,
+        }
+
+    def unpack_model_outputs(self, outputs):
+        va_scores, reconstructions, malignancy_scores, capsules = outputs
+        return {
+            "preds": va_scores,
+            "reconstructions": reconstructions,
+            "malignancy": malignancy_scores,
+            "capsule_poses": capsules,
         }
