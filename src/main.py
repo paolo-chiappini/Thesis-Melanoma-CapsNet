@@ -40,8 +40,10 @@ def main():
 
     print(">" * 5 + f" Running task: [{args.task}]")
 
-    task_fn = get_task(args.task)
-    task_fn(config, model_path=args.model_path, cpu_override=args.cpu)
+    task_cls = get_task(args.task)
+    task = task_cls(config, model_path=args.model_path, cpu_override=args.cpu)
+
+    task.run()
 
     elapsed = time.time() - start_time
     print(f"\n✅ Finished in {str(timedelta(seconds=round(elapsed)))}")
