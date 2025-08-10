@@ -14,16 +14,6 @@ class PerturbationRunner(BaseRunner):
         self.loss_criterion = get_loss(config=self.config["trainer"]["loss"])
 
     def execute(self):
-        trainer = get_trainer(
-            config=self.config,
-            model=self.model,
-            data_loader=self.loaders,
-            loss_criterion=self.loss_criterion,
-            device=self.device,
-            checkpoints_dir=self.config["system"]["save_path"],
-            save_name=self.config["system"]["save_name"],
-        )
-
         sampled_images = self.get_samples_from_classes(
             loader=self.loaders["val"],
             num_samples=self.config["perturbation"]["num_samples"],

@@ -5,9 +5,9 @@ from .perturbation_runner import PerturbationRunner
 
 tasks = {
     "train": TrainRunner,
-    "perturbation": EvaluateRunner,
-    "evaluate": TestRunner,
-    "test": PerturbationRunner,
+    "evaluate": EvaluateRunner,
+    "test": TestRunner,
+    "perturbation": PerturbationRunner,
 }
 
 
