@@ -25,7 +25,9 @@ def evaluate_reconstruction(model, dataloader, device="cuda", prepare_batch=None
                 masked_images = images * batch_dict["masks"]
 
             capsules = model.encode(images)
-            recon = model.decode(capsules)
+            recon = model.decode(
+                capsules[:, :, 1:]
+            )  # discard first dimension used for logits
 
             mse = F.mse_loss(recon, masked_images, reduction="none").mean(dim=(1, 2, 3))
             mse_losses.extend(mse.cpu().numpy())

@@ -30,7 +30,6 @@ def load_model(
     model_name,
     checkpoints_dir="checkpoints",
     device="cpu",
-    multi_gpu=False,
 ):
     state_dict = torch.load(
         os.path.join(checkpoints_dir, model_name + ".pth.tar"),
@@ -41,10 +40,7 @@ def load_model(
     model = model_structure
     model = model.to(device)
 
-    if multi_gpu:
-        model = nn.DataParallel(model)
-    else:
-        state_dict = strip_data_parallel(state_dict)
+    state_dict = strip_data_parallel(state_dict)
 
     model.load_state_dict(state_dict)
     return model

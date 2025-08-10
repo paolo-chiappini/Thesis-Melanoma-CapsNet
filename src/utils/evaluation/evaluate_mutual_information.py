@@ -21,7 +21,9 @@ def compute_capsule_activations(model, dataloader, device="cuda", prepare_batch=
             attrs = batch_dict["visual_attributes"].cpu().numpy()
             caps = model.encode(images)
 
-            all_caps.append(caps.cpu().numpy())
+            all_caps.append(
+                caps.cpu().numpy()[:, :, 1:]
+            )  # discard first dimension used for logits
             all_attrs.append(attrs)
 
     return np.concatenate(all_caps), np.concatenate(all_attrs)

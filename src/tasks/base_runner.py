@@ -66,9 +66,8 @@ class BaseRunner:
                 model_name=self.config["system"]["save_name"],
                 checkpoints_dir=self.config["system"]["save_path"],
                 device=self.device,
-                multi_gpu=self.multi_gpu,
             )
-        if self.multi_gpu:
+        elif self.multi_gpu:  # assumes that for training load_weights = False
             self.model = torch.nn.DataParallel(self.model)
         self.model = self.model.to(self.device)
 
