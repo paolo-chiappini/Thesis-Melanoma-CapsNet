@@ -19,5 +19,5 @@ class MalignancyPredictor(nn.Module):
         self.fc = nn.Linear(num_attributes * capsule_dim, output_dim)
 
     def forward(self, x):
-        x = x.view(x.size(0), -1)  # Flatten the input
+        x = x.reshape(x.size(0), -1)  # Flatten the input
         return self.fc(x)

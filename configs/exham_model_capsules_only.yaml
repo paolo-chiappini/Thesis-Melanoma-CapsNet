@@ -15,7 +15,7 @@ model:
     name: CapsuleNetworkBase
     channels: 3
     primary_dim: 8
-    output_dim: 16
+    pose_dim: 15 # output_dim will be pose_dim + 1 (first dim stores logits for predictions)
     num_classes: 2
     routing_steps: 3
     routing_algorithm: sigmoid
