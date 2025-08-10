@@ -16,9 +16,10 @@ class CapsNetTrainerVAs(BaseTrainer):
         }
 
     def compute_loss(self, outputs, batch_data):
-        predicted_vas, reconstructions, malignancy_scores, class_pose_vectors = outputs
+        attribute_logits, reconstructions, malignancy_scores, attribute_poses = outputs
         return self.criterion(
-            predicted_vas,
+            attribute_logits,
+            attribute_poses,
             batch_data["visual_attributes"],
             malignancy_scores,
             torch.eye(len(malignancy_scores[0])).to(self.device)[

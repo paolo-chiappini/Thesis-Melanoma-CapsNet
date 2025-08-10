@@ -274,6 +274,10 @@ class TotalCorrelationLoss(nn.Module):
         self.loss_beta = loss_beta
 
     def forward(self, z_activations):
+        # flatten activations from (N, num_attr, pose_dim) to (N, num_attr * pose_dim)
+        N, num_attr, pose_dim = z_activations.shape
+        z_activations = z_activations.reshape(N, -1)
+
         N, K = z_activations.shape
 
         pairwise_log_prob_joint = compute_pairwise_log_gaussian(
@@ -333,34 +337,28 @@ class CombinedLoss(nn.Module):
 
     def forward(
         self,
-        capsule_outputs,
+        attribute_caps_logits,
+        attribute_caps_poses,
         attribute_targets,
         malignancy_scores,
-        targets,
+        malignancy_targets,
         images,
         reconstructions,
         masks,
     ):
         capsule_loss = self.capsule_loss(
-            malignancy_scores, targets, images, reconstructions, masks
+            malignancy_scores, malignancy_targets, images, reconstructions, masks
         )
-        attribute_loss = self.attribute_loss(capsule_outputs, attribute_targets)
-        malignancy_loss = self.malignancy_loss(malignancy_scores, targets)
+        attribute_loss = self.attribute_loss(attribute_caps_logits, attribute_targets)
+        malignancy_loss = self.malignancy_loss(malignancy_scores, malignancy_targets)
 
         reconstructions_masks = (
             (reconstructions.norm(dim=1) > 0).float().unsqueeze(1)
         )  # convert reconstructions to binary masks
         segmentation_loss = self.segmentaion_loss(reconstructions_masks, masks)
 
-        tc_loss = self.tc_loss(capsule_outputs)
+        tc_loss = self.tc_loss(attribute_caps_poses)
 
-        # total_loss = (
-        #     capsule_loss
-        #     + attribute_loss
-        #     + tc_loss
-        #     + malignancy_loss
-        #     + segmentation_loss
-        # )
         return {
             "capsule_loss": capsule_loss,
             "attribute_loss": attribute_loss,
