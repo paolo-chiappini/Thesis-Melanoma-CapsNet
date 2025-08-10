@@ -280,6 +280,11 @@ class TotalCorrelationLoss(nn.Module):
 
         N, K = z_activations.shape
 
+        # normalize poses
+        poses_mean = z_activations.mean(dim=0, keepdim=True)
+        poses_std = z_activations.std(dim=0, keepdim=True)
+        z_activations = (z_activations - poses_mean) / (poses_std + 1e-6)
+
         pairwise_log_prob_joint = compute_pairwise_log_gaussian(
             z_activations, z_activations
         )

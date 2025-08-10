@@ -30,7 +30,8 @@ class PerturbationRunner(BaseRunner):
                 global_perturbation=self.config["perturbation"]["is_global"],
             )
 
-    def get_samples_from_classes(loader, num_samples=3, num_classes=2):
+    def get_samples_from_classes(self, loader, num_samples=3, num_classes=2):
+
         classes = range(num_classes)
         class_images = {i: [] for i in classes}
 
