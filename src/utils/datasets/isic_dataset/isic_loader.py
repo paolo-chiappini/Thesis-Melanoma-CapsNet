@@ -1,7 +1,15 @@
+import numpy as np
 from ..base_dataset import BaseDataset
 import os
 import torch
 from PIL import Image
+import torchvision.transforms as T
+
+
+LABEL_MAP = {"benign": 0, "malignant": 1}
+
+# TODO: make this better
+normalize_tranform = T.Compose([T.ToTensor()])
 
 
 # TODO: Fix this
@@ -34,15 +42,6 @@ class ISICDataset(BaseDataset):
 
         self.labels = self.data[self.label]
 
-        # if augment:
-        #     _, self.metadata_path = augment_dataset(self)
-        #     self.load_metadata()  # Force metadata reload
-        #     self.labels = self.data[self.label]
-
-        # self.load_segmentations = load_segmentations
-        # self.segmentations_path = "segmentations"
-        # self.segmentation_extension = "png"
-
         print("[ISIC 2020] Loaded dataset with", len(self.data), "rows")
 
     def __getitem__(self, index):
@@ -61,31 +60,16 @@ class ISICDataset(BaseDataset):
             image_id + "." + self.image_extension,
         )
 
-        # segmentation_path = os.path.join(
-        #     self.root,
-        #     self.segmentations_path,
-        #     image_id + "_segmentation." + self.segmentation_extension,
-        # )
-
         image_path = os.path.normpath(image_path)
-        # segmentation_path = os.path.normpath(segmentation_path)
-
         image = Image.open(image_path).convert("RGB")
-        # segmentation = (
-        #     Image.open(segmentation_path).convert("L")
-        #     if self.load_segmentations
-        #     else None
-        # )
 
         if self.transform:
-            image = self.transform(image)
-            # segmentation = (
-            #     self.transform(segmentation) if segmentation is not None else None
-            # )
+            image_np = np.array(image).astype(np.uint8)
+            transformed = self.transform(image=image_np)
+            image = normalize_tranform(transformed["image"])
 
-        label = torch.tensor(label, dtype=torch.int)
+        label = torch.tensor([LABEL_MAP[label]], dtype=torch.float)
 
-        # return (image, label, visual_features, segmentation)
         return (image, label)
 
     def check_missing_files(self):

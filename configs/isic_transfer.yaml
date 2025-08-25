@@ -1,0 +1,47 @@
+dataset:
+    name: ISICDataset
+    root: D:\______IMPORTANT\ISIC Challange 2020\training data
+    metadata_path: ./ISIC_2020_Training_GroundTruth_v2.csv
+    image_extension: jpg
+    batch_size: 32
+    val_size: 0.1
+    test_size: 0.0001
+
+preprocess:
+    img_size: 256
+
+model:
+    name: TransferModel
+    num_classes: 1 # Binary classification 0: benign, 1: malignant
+
+trainer:
+    name: TransferTrainer
+    epochs: 50
+    learning_rate: 0.001
+    lr_decay: 0.95
+    loss:
+        name: MalignancyLoss
+
+callbacks:
+    - name: PlotCallback
+      filename: transfer_acc.png
+    - name: EarlyStoppingCallback
+      patience: 5
+      min_delta: 0.01
+      restore_best_weights: True
+
+metrics:
+    - type: f1
+    - type: precision
+    - type: recall
+
+system:
+    seed: 123
+    augment: True
+    save_name: resnet34_baseline
+    save_path: ./checkpoints/
+    has_visual_attributes: False
+    use_weighted_metrics: True
+
+evaluate:
+    split_size: 0.2

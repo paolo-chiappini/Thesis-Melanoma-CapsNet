@@ -6,6 +6,7 @@ from .model_conv_attributes_32 import CapsuleNetworkWithAttributes32
 from .autoencoder import ConvAutoencoder
 from .model_conv_va_small import CapsuleNetworkWithAttributesSmall
 from .model_sanity_check import SanityCheckModel
+from .model_transfer import TransferModel
 
 
 def get_model(config, data_loader, device):

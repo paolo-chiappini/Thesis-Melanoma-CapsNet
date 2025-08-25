@@ -16,6 +16,7 @@ class CapsNetTrainerVAs(BaseTrainer):
         }
 
     def compute_loss(self, outputs, batch_data):
+        # TODO: use unpack method here?
         attribute_logits, reconstructions, malignancy_scores, attribute_poses = outputs
         return self.criterion(
             attribute_logits,

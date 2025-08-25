@@ -6,6 +6,7 @@ from .trainer_base import BaseTrainer
 from .trainer_capsnet_vas import CapsNetTrainerVAs
 from .trainer_autoencoder import AutoEncoderTrainer
 from .trainer_sanity_check import SanityCheckTrainer
+from .trainer_transfer import TransferTrainer
 
 
 def get_trainer(
@@ -40,7 +41,11 @@ def get_trainer(
         )
 
     first_key = list(data_loader.keys())[0]
-    num_attributes = data_loader[first_key].dataset[0][2].shape[0]
+
+    try:
+        num_attributes = data_loader[first_key].dataset[0][2].shape[0]
+    except:
+        num_attributes = 0
 
     return trainer_class(
         model,

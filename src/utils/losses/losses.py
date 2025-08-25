@@ -201,7 +201,12 @@ class MaskedReconstructionLoss(nn.Module):
 
 
 class MalignancyLoss(nn.Module):
-    def __init__(self, loss_lambda=1.0, loss_criterion=F.mse_loss):
+    def __init__(
+        self,
+        loss_lambda=1.0,
+        loss_criterion=F.binary_cross_entropy_with_logits,
+        **kwargs
+    ):  # TODO: is MSE correct here? shouldn't it be BCE or CE in general?
         super(MalignancyLoss, self).__init__()
         self.loss_lambda = loss_lambda
         self.loss_criterion = loss_criterion
