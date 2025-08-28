@@ -9,7 +9,7 @@ from skimage.metrics import peak_signal_noise_ratio as psnr
 class AutoEncoderTrainer(BaseTrainer):
 
     def prepare_batch(self, batch):
-        images, _, _, _ = batch
+        images = batch["image"]
         images = images.to(self.device)
         return {"inputs": images, "targets": images}
 

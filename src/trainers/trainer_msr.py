@@ -1,24 +1,30 @@
 from .trainer_base import BaseTrainer
 import torch
+import torch.nn as nn
 from utils.commons import compute_weighted_accuracy
+from utils.losses.losses_msr import MaskedMSELoss
 
 _CORRECT_THRESHOLD = 0.5
 
 
-class CapsNetTrainerVAs(BaseTrainer):
+class CapsNetTrainerMSR(BaseTrainer):
     def prepare_batch(self, batch):
         return {
             "inputs": batch["image"].to(self.device),
             "labels": batch["label"].to(self.device),
             "visual_attributes": batch["visual_features"].to(self.device),
             "masks": batch["segmentation"].to(self.device),
-            # "va_masks": batch["va_masks"].to(self.device),
+            "va_masks": batch["va_masks"].to(self.device),
         }
 
     def compute_loss(self, outputs, batch_data):
         # TODO: use unpack method here?
+        images = batch_data["inputs"]
+        masks = batch_data["masks"]
+        va_masks = batch_data["va_masks"]
+
         attribute_logits, reconstructions, malignancy_scores, attribute_poses = outputs
-        return self.criterion(
+        total_loss = self.criterion(
             attribute_logits,
             attribute_poses,
             batch_data["visual_attributes"],
@@ -26,10 +32,45 @@ class CapsNetTrainerVAs(BaseTrainer):
             torch.eye(len(malignancy_scores[0])).to(self.device)[
                 batch_data["labels"]
             ],  # one hot encoded labels
-            batch_data["inputs"],
+            images,
             reconstructions,
-            batch_data["masks"],
+            masks,
         )
+
+        # TODO: temporary MSR Loss implementation
+        alpha = 0.5
+        beta = 0.5
+
+        global_recon_criterion = nn.MSELoss()
+        local_recon_criterion = MaskedMSELoss()
+
+        global_reconstruction = self.model.decode(attribute_poses)
+        loss_global_recon = global_recon_criterion(global_reconstruction, images)
+
+        loss_msr = 0.0
+        N, K, pose_dim = attribute_poses.shape
+        H, W = images.shape[2], images.shape[3]
+
+        for k in range(K):
+            single_capsule_poses = torch.zeros_like(
+                attribute_poses, device=attribute_poses.device
+            )
+            single_capsule_poses[:, k, :] = attribute_poses[
+                :, k, :
+            ]  # isolate the k-th capsule
+
+            local_reconstruction_k = self.model.decode(single_capsule_poses)
+
+            masks_k = va_masks[:, k, :, :].unsqueeze(1)
+
+            loss_msr_k = local_recon_criterion(local_reconstruction_k, images, masks_k)
+            loss_msr += loss_msr_k
+        loss_msr_avg = loss_msr / K
+
+        total_recon_loss = alpha * loss_global_recon + beta * loss_msr_avg
+
+        total_loss.update({"msr_loss": total_recon_loss})
+        return total_loss
 
     def compute_custom_metrics(self, outputs, batch_data):
         outputs_dict = self.unpack_model_outputs(outputs)

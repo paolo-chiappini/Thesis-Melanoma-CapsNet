@@ -1,17 +1,29 @@
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+import cv2
 
 
 def get_train_augmentations(img_size):
     return A.Compose(
         [
-            A.Resize(img_size, img_size),
+            A.Resize(
+                img_size,
+                img_size,
+                interpolation=cv2.INTER_LINEAR,
+                mask_interpolation=cv2.INTER_NEAREST,
+            ),
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.5),
             A.Rotate(limit=10, p=0.5),
             A.RandomBrightnessContrast(p=0.4),
             A.ElasticTransform(alpha=1, sigma=50, alpha_affine=50, p=0.3),
             # ToTensorV2(),
+            A.Resize(
+                img_size,
+                img_size,
+                interpolation=cv2.INTER_LINEAR,
+                mask_interpolation=cv2.INTER_NEAREST,
+            ),
         ]
     )
 
@@ -19,7 +31,12 @@ def get_train_augmentations(img_size):
 def get_val_augmentations(img_size):
     return A.Compose(
         [
-            A.Resize(img_size, img_size),
+            A.Resize(
+                img_size,
+                img_size,
+                interpolation=cv2.INTER_LINEAR,
+                mask_interpolation=cv2.INTER_NEAREST,
+            ),
             # ToTensorV2(), # TODO: review this (may be buggy), currently replaced by torchvision ToTensor()
         ]
     )
