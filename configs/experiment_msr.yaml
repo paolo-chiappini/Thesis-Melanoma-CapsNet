@@ -3,7 +3,7 @@ dataset:
     root: ./data/EXHAMDataset
     metadata_path: null
     image_extension: null
-    batch_size: 32
+    batch_size: 8
     val_size: 0.1
     test_size: 0.1
 
@@ -28,10 +28,10 @@ trainer:
         name: CombinedLoss
         margin_loss_lambda: 0.5 # Capsule margin loss balance
         margin_loss_gamma: 2.0 # Focal term, common starting value
-        reconstruction_loss_scale: 0 # Uses MSR to replace reconstuction
+        reconstruction_loss_scale: 0.000001 # Uses MSR to replace reconstuction
         attribute_loss_lambda: 10.0 # Main classification task
         malignancy_loss_lambda: 0.5 # Secondary classificaiton task
-        segmentation_loss_lambda: 0 # Often scaled up because segmentation losses tend to be smaller in magnitude
+        segmentation_loss_lambda: 0.0 # Often scaled up because segmentation losses tend to be smaller in magnitude
         tc_loss_beta: 0.1 # Total correlation loss usually small to avoid over-regularizing
 
 callbacks:

@@ -38,8 +38,8 @@ class CapsNetTrainerMSR(BaseTrainer):
         )
 
         # TODO: temporary MSR Loss implementation
-        alpha = 0.5
-        beta = 0.5
+        alpha = 1.0
+        beta = 1.0
 
         global_recon_criterion = nn.MSELoss()
         local_recon_criterion = MaskedMSELoss()
