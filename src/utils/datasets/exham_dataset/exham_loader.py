@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 from ..base_dataset import BaseDataset
 import os
@@ -6,7 +7,7 @@ from PIL import Image
 import torchvision.transforms as T
 
 # TODO: make this better
-normalize_tranform = T.Compose([T.ToTensor()])
+normalize_transform = T.Compose([T.ToTensor()])
 
 
 class EXHAMDataset(BaseDataset):
@@ -104,13 +105,13 @@ class EXHAMDataset(BaseDataset):
         image_path = os.path.join(
             self.root,
             self.image_path,
-            image_id + "." + self.image_extension,
+            f"{image_id}.{self.image_extension}",
         )
 
         segmentation_path = os.path.join(
             self.root,
             self.segmentations_path,
-            image_id + "_segmentation." + self.segmentation_extension,
+            f"{image_id}_segmentation.{self.segmentation_extension}",
         )
 
         image_path = os.path.normpath(image_path)
@@ -123,36 +124,59 @@ class EXHAMDataset(BaseDataset):
             else None
         )
 
+        va_masks = self.load_va_masks(
+            os.path.normpath(os.path.join(self.root, "va_masks")), image_id, image.size
+        )
+
         if self.transform:
             image_np = np.array(image).astype(np.uint8)
             segmentation_np = (
                 np.array(segmentation) if segmentation is not None else None
             ).astype(np.uint8)
+            va_masks_np = [np.array(mask).astype(np.uint8) for mask in va_masks]
 
-            transformed = self.transform(image=image_np, masks=[segmentation_np])
-            image = normalize_tranform(transformed["image"])
-            segmentation = normalize_tranform(transformed["masks"][0])
+            transformed = self.transform(
+                image=image_np, masks=[segmentation_np] + va_masks_np
+            )
 
-            # transformed = self.transform(
-            #     image=image_np,
-            #     masks=[
-            #         segmentation_np
-            #     ],  # in case of attribute masks: [segmentation] + attribute_masks
-            # )
+            image = normalize_transform(transformed["image"])
+            masks = transformed["masks"]
+            lesion_mask = normalize_transform(masks[0])
+            attribute_masks = normalize_transform(np.stack(masks[1:], axis=-1))
 
-            # image = transformed["image"]
-            # segmentation = transformed["masks"][0].unsqueeze(0)
-            # TODO: add attribute mask loading
-            # lesion_mask = masks[0]
-            # attribute_masks = troch.stack(masks[1:], dim=0)
+            for mask in attribute_masks:
+                assert (
+                    mask.shape == image.shape[1:]
+                ), f"Image and masks have different shapes for lesion {image_id}. Mask size {mask.shape}. Image size: {image.shape}."
 
         label = torch.tensor(label, dtype=torch.int)
         visual_features = record[self.visual_attributes].values.astype(float)
         visual_features = torch.tensor(visual_features, dtype=torch.float)
 
-        return (image, label, visual_features, segmentation)
+        # return (image, label, visual_features, segmentation)
+        return {
+            "image": image,
+            "label": label,
+            "visual_features": visual_features,
+            "segmentation": lesion_mask,
+            "va_masks": attribute_masks,
+        }
 
     def check_missing_files(self):
         full_image_path = lambda _: self.image_path
 
         super().check_missing_files(full_image_path, "image_id")
+
+    def load_va_masks(self, path, lesion_id, img_size):
+        files_for_lesion = []
+        for va in self.visual_attributes:
+            file_path = os.path.join(path, f"{lesion_id}_{va}.{self.image_extension}")
+            file_path = os.path.normpath(file_path)
+            if os.path.exists(file_path):
+                Image.open(file_path).convert("L")
+                mask.resize(size=img_size)
+            else:
+                mask = Image.new("L", img_size, 0)  # create blank mask
+
+            files_for_lesion.append(mask)
+        return files_for_lesion

@@ -7,6 +7,7 @@ from .trainer_capsnet_vas import CapsNetTrainerVAs
 from .trainer_autoencoder import AutoEncoderTrainer
 from .trainer_sanity_check import SanityCheckTrainer
 from .trainer_transfer import TransferTrainer
+from .trainer_msr import CapsNetTrainerMSR
 
 
 def get_trainer(

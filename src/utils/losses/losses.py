@@ -342,7 +342,7 @@ class CombinedLoss(nn.Module):
             loss_lambda=attribute_loss_lambda, attribute_weights=attribute_weights
         )
         self.malignancy_loss = MalignancyLoss(loss_lambda=malignancy_loss_lambda)
-        self.segmentaion_loss = SegmentationLoss(loss_lamdba=segmentation_loss_lambda)
+        self.segmentation_loss = SegmentationLoss(loss_lamdba=segmentation_loss_lambda)
         self.tc_loss = TotalCorrelationLoss(loss_beta=tc_loss_beta)
 
     def forward(
@@ -362,10 +362,10 @@ class CombinedLoss(nn.Module):
         attribute_loss = self.attribute_loss(attribute_caps_logits, attribute_targets)
         malignancy_loss = self.malignancy_loss(malignancy_scores, malignancy_targets)
 
-        reconstructions_masks = (
-            (reconstructions.norm(dim=1) > 0).float().unsqueeze(1)
-        )  # convert reconstructions to binary masks
-        segmentation_loss = self.segmentaion_loss(reconstructions_masks, masks)
+        # reconstructions_masks = (
+        #     (reconstructions.norm(dim=1) > 0).float().unsqueeze(1)
+        # )  # convert reconstructions to binary masks
+        # segmentation_loss = self.segmentation_loss(reconstructions_masks, masks)
 
         tc_loss = self.tc_loss(attribute_caps_poses)
 
@@ -374,5 +374,5 @@ class CombinedLoss(nn.Module):
             "attribute_loss": attribute_loss,
             "tc_loss": tc_loss,
             "malignancy_loss": malignancy_loss,
-            "segmentation_loss": segmentation_loss,
+            # "segmentation_loss": segmentation_loss,
         }
