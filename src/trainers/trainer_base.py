@@ -251,9 +251,6 @@ class BaseTrainer(ABC):
                         self.compute_custom_metrics(outputs, batch_data)
                     )
 
-                # TODO: remove, may be used for visualization still (makes the segmentation comparison clearer)
-                masks = batch_data["masks"]
-
         tm_metrics = self._compute_metrics()
         avg_custom_metrics = self._aggregate_metrics(all_custom_metrics)
         avg_metrics = {**tm_metrics, **avg_custom_metrics}
@@ -275,6 +272,7 @@ class BaseTrainer(ABC):
             self.early_stop = self.early_stop or logs.get("stop", False)
 
             if "reconstructions" in outputs_dict:
+                masks = batch_data["masks"]
                 callback_manager.on_reconstruction(
                     images[:8] * masks[:8],
                     outputs_dict["reconstructions"][:8],

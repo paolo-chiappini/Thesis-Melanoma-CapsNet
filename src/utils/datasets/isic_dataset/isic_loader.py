@@ -3,6 +3,7 @@ from ..base_dataset import BaseDataset
 import os
 import torch
 from PIL import Image
+import pydicom as dicom
 import torchvision.transforms as T
 
 
@@ -61,7 +62,10 @@ class ISICDataset(BaseDataset):
         )
 
         image_path = os.path.normpath(image_path)
-        image = Image.open(image_path).convert("RGB")
+        if self.image_extension == 'dcm':
+            image = dicom.dcmread(image_path).pixel_array
+        else:
+            image = Image.open(image_path).convert("RGB")
 
         if self.transform:
             image_np = np.array(image).astype(np.uint8)

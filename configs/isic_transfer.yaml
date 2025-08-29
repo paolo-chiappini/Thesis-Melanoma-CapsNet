@@ -1,11 +1,11 @@
 dataset:
     name: ISICDataset
-    root: D:\______IMPORTANT\ISIC Challange 2020\training data
+    root: ./data/ISICDataset
     metadata_path: ./ISIC_2020_Training_GroundTruth_v2.csv
-    image_extension: jpg
-    batch_size: 32
-    val_size: 0.1
-    test_size: 0.0001
+    image_extension: dcm
+    batch_size: 64
+    val_size: 0.2
+    test_size: 0.2
 
 preprocess:
     img_size: 256
@@ -16,7 +16,7 @@ model:
 
 trainer:
     name: TransferTrainer
-    epochs: 50
+    epochs: 10
     learning_rate: 0.001
     lr_decay: 0.95
     loss:
