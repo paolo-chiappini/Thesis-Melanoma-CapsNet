@@ -1,12 +1,15 @@
 import os
+from collections import OrderedDict
+
+import albumentations as A
+import numpy as np
 import torch
 import torch.nn as nn
-from collections import OrderedDict
-import numpy as np
-from .datasets.augmentations import get_transforms
-from torch.utils.data import DataLoader, Subset
-import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from sklearn.model_selection import StratifiedGroupKFold
+from torch.utils.data import DataLoader, Subset
+
+from .datasets.augmentations import get_transforms
 
 
 def get_all_subclasses(cls):
@@ -110,6 +113,54 @@ def stratified_split(labels, val_size=0.1, test_size=0.1, seed=123):
     return train_val_idx[train_idx], train_val_idx[val_idx], test_idx
 
 
+def group_stratified_split(labels, groups, test_size=0.1, val_size=0.1, seed=123):
+    if len(labels) != len(groups):
+        raise ValueError("Labels and groups must have the same length.")
+
+    labels = np.array(labels)
+    groups = np.array(groups)
+    indices = np.arange(len(labels))
+
+    n_splits_test = int(np.ceil(1.0 / test_size))
+    sgkf_test = StratifiedGroupKFold(
+        n_splits=n_splits_test, shuffle=True, random_state=seed
+    )
+
+    train_val_idx, test_idx = next(sgkf_test.split(indices, labels, groups))
+
+    train_val_labels = labels[train_val_idx]
+    train_val_groups = groups[train_val_idx]
+
+    val_proportion = val_size / (1.0 - test_size)
+    n_splits_val = int(np.ceil(1.0 / val_proportion))
+    sgkf_val = StratifiedGroupKFold(
+        n_splits=n_splits_val, shuffle=True, random_state=seed
+    )
+
+    train_sub_idx, val_sub_idx = next(
+        sgkf_val.split(train_val_idx, train_val_labels, train_val_groups)
+    )
+
+    train_idx = train_val_idx[train_sub_idx]
+    val_idx = train_val_idx[val_sub_idx]
+
+    train_groups = set(groups[train_idx])
+    val_groups = set(groups[val_idx])
+    test_groups = set(groups[test_idx])
+
+    assert (
+        len(train_groups.intersection(val_groups)) == 0
+    ), "FATAL: Patient overlap between train and val"
+    assert (
+        len(train_groups.intersection(test_groups)) == 0
+    ), "FATAL: Patient overlap between train and test"
+    assert (
+        len(val_groups.intersection(test_groups)) == 0
+    ), "FATAL: Patient overlap between val and test"
+
+    return train_idx, val_idx, test_idx
+
+
 def build_dataloaders(config, dataset, batch_size, num_workers=0):
     transform_val = get_transforms(config, is_train=False)
 
@@ -118,7 +169,10 @@ def build_dataloaders(config, dataset, batch_size, num_workers=0):
 
     val_size = dataset_config.get("val_size", 0.1)
     test_size = dataset_config.get("test_size", 0.1)
-    train_idx, val_idx, test_idx = stratified_split(
+
+    split_method = group_stratified_split if dataset.groups else stratified_split
+
+    train_idx, val_idx, test_idx = split_method(
         dataset.labels,
         val_size=val_size,
         test_size=test_size,
