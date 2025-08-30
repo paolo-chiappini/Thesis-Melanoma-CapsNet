@@ -1,11 +1,12 @@
-import numpy as np
-from ..base_dataset import BaseDataset
 import os
-import torch
-from PIL import Image
-import pydicom as dicom
-import torchvision.transforms as T
 
+import numpy as np
+import pydicom as dicom
+import torch
+import torchvision.transforms as T
+from PIL import Image
+
+from ..base_dataset import BaseDataset
 
 LABEL_MAP = {"benign": 0, "malignant": 1}
 
@@ -13,7 +14,9 @@ LABEL_MAP = {"benign": 0, "malignant": 1}
 imagenet_mean = [0.485, 0.456, 0.406]
 imagenet_std = [0.229, 0.224, 0.225]
 
-normalize_tranform = T.Compose([T.ToTensor(), T.Normalize(mean=imagenet_mean, std=imagenet_std)])
+normalize_tranform = T.Compose(
+    [T.ToTensor(), T.Normalize(mean=imagenet_mean, std=imagenet_std)]
+)
 
 
 # TODO: Fix this
@@ -45,6 +48,7 @@ class ISICDataset(BaseDataset):
         )
 
         self.labels = self.data[self.label]
+        self.groups = self.data["partient_id"].values
 
         print("[ISIC 2020] Loaded dataset with", len(self.data), "rows")
 
@@ -65,7 +69,7 @@ class ISICDataset(BaseDataset):
         )
 
         image_path = os.path.normpath(image_path)
-        if self.image_extension == 'dcm':
+        if self.image_extension == "dcm":
             image = dicom.dcmread(image_path).pixel_array
         else:
             image = Image.open(image_path).convert("RGB")
@@ -77,10 +81,7 @@ class ISICDataset(BaseDataset):
 
         label = torch.tensor([LABEL_MAP[label]], dtype=torch.float)
 
-        return {
-            "image": image, 
-            "label": label
-        }
+        return {"image": image, "label": label}
 
     def check_missing_files(self):
         full_image_path = lambda _: self.image_path
