@@ -5,7 +5,7 @@ from utils.commons import compute_weighted_accuracy
 
 class TransferTrainer(BaseTrainer):
     def prepare_batch(self, batch):
-        images, labels = batch
+        images, labels = batch['image'], batch['label']
         return {
             "inputs": images.to(self.device),
             "labels": labels.to(self.device),

@@ -33,5 +33,7 @@ class TrainRunner(BaseRunner):
         callbacks = get_callbacks(callback_config=self.config.get("callbacks", []))
         callback_manager = CallbackManager(callbacks=callbacks)
 
+        print('Running training with class weights', self.weights.get('class_weights'))
+
         trainer.run(self.config["trainer"]["epochs"], callback_manager=callback_manager)
         trainer.test(split="val")

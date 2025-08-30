@@ -10,7 +10,10 @@ import torchvision.transforms as T
 LABEL_MAP = {"benign": 0, "malignant": 1}
 
 # TODO: make this better
-normalize_tranform = T.Compose([T.ToTensor()])
+imagenet_mean = [0.485, 0.456, 0.406]
+imagenet_std = [0.229, 0.224, 0.225]
+
+normalize_tranform = T.Compose([T.ToTensor(), T.Normalize(mean=imagenet_mean, std=imagenet_std)])
 
 
 # TODO: Fix this
@@ -34,7 +37,7 @@ class ISICDataset(BaseDataset):
                 if metadata_path is not None
                 else "Datasets/metadata/metadata_ground_truth.csv"
             ),
-            image_path="train",
+            image_path="train_preprocessed",
             transform=transform,
             image_id=image_id,
             label=label,
@@ -74,7 +77,10 @@ class ISICDataset(BaseDataset):
 
         label = torch.tensor([LABEL_MAP[label]], dtype=torch.float)
 
-        return (image, label)
+        return {
+            "image": image, 
+            "label": label
+        }
 
     def check_missing_files(self):
         full_image_path = lambda _: self.image_path
