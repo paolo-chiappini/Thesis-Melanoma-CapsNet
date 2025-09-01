@@ -1,13 +1,14 @@
 import torch.optim as optim
+
 from utils.commons import get_classes_from_module
 from utils.metrics import build_metrics
 
+from .trainer_autoencoder import AutoEncoderTrainer
 from .trainer_base import BaseTrainer
 from .trainer_capsnet_vas import CapsNetTrainerVAs
-from .trainer_autoencoder import AutoEncoderTrainer
+from .trainer_msr import CapsNetTrainerMSR
 from .trainer_sanity_check import SanityCheckTrainer
 from .trainer_transfer import TransferTrainer
-from .trainer_msr import CapsNetTrainerMSR
 
 
 def get_trainer(
@@ -34,7 +35,10 @@ def get_trainer(
         raise ValueError(f"Unknown trainer: {name}")
 
     if optimizer is None:
-        optimizer = optim.Adam(model.parameters(), lr=trainer_config["learning_rate"])
+        params_to_update = filter(
+            lambda p: p.requires_grad, model.parameters()
+        )  # optimize only on unfrozen params
+        optimizer = optim.Adam(params_to_update, lr=trainer_config["learning_rate"])
 
     if scheduler is None:
         scheduler = optim.lr_scheduler.ExponentialLR(
@@ -57,7 +61,13 @@ def get_trainer(
         device,
         checkpoints_dir,
         save_name=save_name,
-        metrics=build_metrics(
-            metrics_config=metrics_config, num_attributes=num_attributes, device=device
-        ) if metrics_config is not None else {},
+        metrics=(
+            build_metrics(
+                metrics_config=metrics_config,
+                num_attributes=num_attributes,
+                device=device,
+            )
+            if metrics_config is not None
+            else {}
+        ),
     )

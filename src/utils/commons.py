@@ -170,12 +170,14 @@ def build_dataloaders(config, dataset, batch_size, num_workers=0):
     val_size = dataset_config.get("val_size", 0.1)
     test_size = dataset_config.get("test_size", 0.1)
 
-    split_method = group_stratified_split if hasattr(dataset, 'groups') else stratified_split
-    print(f'Chosen split method: {split_method}')
+    split_method = (
+        group_stratified_split if hasattr(dataset, "groups") else stratified_split
+    )
+    print(f"Chosen split method: {split_method}")
 
     train_idx, val_idx, test_idx = split_method(
         dataset.labels,
-        dataset.groups,
+        dataset.groups if hasattr(dataset, "groups") else None,
         val_size=val_size,
         test_size=test_size,
         seed=system_config["seed"],
