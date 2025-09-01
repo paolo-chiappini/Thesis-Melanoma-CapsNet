@@ -12,7 +12,7 @@ preprocess:
 
 model:
     name: TransferModel
-    num_classes: 1 # Binary classification 0: benign, 1: malignant
+    num_classes: 2 # Binary classification 0: benign, 1: malignant
 
 trainer:
     name: TransferTrainer
@@ -29,11 +29,6 @@ callbacks:
       patience: 20
       min_delta: 0.01
       restore_best_weights: True
-
-metrics:
-    - type: f1
-    - type: precision
-    - type: recall
 
 system:
     seed: 123

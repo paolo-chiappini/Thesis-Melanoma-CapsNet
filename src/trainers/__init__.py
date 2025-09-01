@@ -22,7 +22,7 @@ def get_trainer(
     save_name="model",
 ):
     trainer_config = config["trainer"]
-    metrics_config = config["metrics"]
+    metrics_config = config.get("metrics", None)
 
     trainer_classes = get_classes_from_module(
         module_startswith="trainers", parent_class=BaseTrainer
@@ -59,5 +59,5 @@ def get_trainer(
         save_name=save_name,
         metrics=build_metrics(
             metrics_config=metrics_config, num_attributes=num_attributes, device=device
-        ),
+        ) if metrics_config is not None else {},
     )

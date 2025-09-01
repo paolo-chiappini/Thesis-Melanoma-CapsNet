@@ -94,7 +94,7 @@ def compute_class_weights(class_counts, device):
     return torch.tensor(weights).to(device)
 
 
-def stratified_split(labels, val_size=0.1, test_size=0.1, seed=123):
+def stratified_split(labels, groups=None, val_size=0.1, test_size=0.1, seed=123):
     from sklearn.model_selection import StratifiedShuffleSplit
 
     indices = np.arange(len(labels))
@@ -170,10 +170,12 @@ def build_dataloaders(config, dataset, batch_size, num_workers=0):
     val_size = dataset_config.get("val_size", 0.1)
     test_size = dataset_config.get("test_size", 0.1)
 
-    split_method = group_stratified_split if dataset.groups else stratified_split
+    split_method = group_stratified_split if hasattr(dataset, 'groups') else stratified_split
+    print(f'Chosen split method: {split_method}')
 
     train_idx, val_idx, test_idx = split_method(
         dataset.labels,
+        dataset.groups,
         val_size=val_size,
         test_size=test_size,
         seed=system_config["seed"],

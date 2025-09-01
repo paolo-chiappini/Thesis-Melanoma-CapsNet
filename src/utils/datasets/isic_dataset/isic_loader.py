@@ -79,9 +79,10 @@ class ISICDataset(BaseDataset):
             transformed = self.transform(image=image_np)
             image = normalize_tranform(transformed["image"])
 
-        label = torch.tensor([LABEL_MAP[label]], dtype=torch.float)
+        label = torch.tensor(LABEL_MAP[label], dtype=torch.float)
 
-        return {"image": image, "label": label}
+        # return {"image": image, "label": label}
+        return image, label
 
     def check_missing_files(self):
         full_image_path = lambda _: self.image_path
