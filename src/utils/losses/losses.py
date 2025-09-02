@@ -1,9 +1,9 @@
 # credits: https://github.com/danielhavir/capsule-network
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 
 class MarginLoss(nn.Module):
@@ -74,19 +74,20 @@ class CapsuleLoss(nn.Module):
         """
         super(CapsuleLoss, self).__init__()
         self.size_average = size_average
-        self.margin_loss = WeightedMarginLoss(
-            class_weights=class_weights,
-            gamma=focal_gamma,
-            size_average=size_average,
-            loss_lambda=loss_lambda,
-        )
+        # self.margin_loss = WeightedMarginLoss(
+        #     class_weights=class_weights,
+        #     gamma=focal_gamma,
+        #     size_average=size_average,
+        #     loss_lambda=loss_lambda,
+        # )
         self.reconstruction_loss = nn.MSELoss(size_average=size_average)
         self.reconstruction_loss_scale = reconstruction_loss_scale
 
     def forward(self, inputs, labels, images, reconstructions, masks):
-        margin_loss = self.margin_loss(inputs, labels)
+        # margin_loss = self.margin_loss(inputs, labels)
         reconstruction_loss = self.reconstruction_loss(reconstructions, images * masks)
-        caps_loss = margin_loss + self.reconstruction_loss_scale * reconstruction_loss
+        # caps_loss = margin_loss + self.reconstruction_loss_scale * reconstruction_loss
+        caps_loss = self.reconstruction_loss_scale * reconstruction_loss
 
         return caps_loss
 

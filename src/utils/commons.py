@@ -43,15 +43,15 @@ def load_model(
     model = model_structure
     model = model.to(device)
 
-    state_dict = strip_data_parallel(state_dict)
+    state_dict = strip_module_prefix(state_dict)
 
     model.load_state_dict(state_dict)
     return model
 
 
-def strip_data_parallel(model_state_dict):
+def strip_module_prefix(model_state_dict, prefix="module."):
     """
-    Removes prefixes added when training model in nn.DataParallel to allow loading of models on single-device machines.
+    Removes prefixes added when training model inside a nn.Module.
 
     Args:
         model_state_dict (Dict): dictionary of weights loaded by torch.
@@ -59,7 +59,7 @@ def strip_data_parallel(model_state_dict):
     new_state_dict = OrderedDict()
 
     for k, v in model_state_dict.items():
-        new_key = k.replace("module.", "")
+        new_key = k.replace(prefix, "")
         new_state_dict[new_key] = v
 
     return new_state_dict

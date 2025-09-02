@@ -3,6 +3,7 @@ import torch.nn as nn
 import torchvision.models as models
 
 from layers import ConvDecoder, MalignancyPredictor, PrimaryCapsules, RoutingCapsules
+from utils.commons import strip_module_prefix
 from utils.layer_output_shape import get_network_output_shape
 
 
@@ -38,10 +39,11 @@ class ModelPretrainedCapsnet(nn.Module):
 
         self.primary_capsules = PrimaryCapsules(
             input_channels=encoder_output_channels,
-            output_capsules=32,
-            output_dim=primary_dim,
+            output_channels=256,
+            capsule_dimension=primary_dim,
             kernel_size=1,  # small kernel size due to Resnet small feature maps
             stride=1,
+            padding="valid",
         )
 
         with torch.no_grad():
@@ -54,11 +56,11 @@ class ModelPretrainedCapsnet(nn.Module):
         output_dim = pose_dim + 1
 
         self.attribute_capsules = RoutingCapsules(
-            input_dim=primary_dim,
-            input_capsules=primary_caps_count,
-            num_capsules=num_attributes,
-            output_dim=output_dim,
-            routing_steps=routing_steps,
+            primary_dim,
+            primary_caps_count,
+            num_attributes,
+            output_dim,
+            routing_steps,
             device=self.device,
             routing_algorithm=routing_algorithm,
         )
@@ -99,13 +101,15 @@ class ModelPretrainedCapsnet(nn.Module):
 
         full_model = models.resnet18(weights=None)
         num_ftrs = full_model.fc.in_features
-        full_model.fc = nn.Linear(num_ftrs, self.num_classes)
+        full_model.fc = nn.Sequential(nn.Dropout(p=0.5), nn.Linear(num_ftrs, 2))
 
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
-        full_model.load_state_dict(checkpoint["model_state_dict"])
-        print(
-            f"Successfully loaded weights from epoch {checkpoint['epoch']} with validation loss {checkpoint['val_loss']:.4f}"
+        checkpoint = torch.load(
+            checkpoint_path, map_location=self.device, weights_only=False
         )
+        full_model.load_state_dict(
+            strip_module_prefix(checkpoint, prefix="module.encoder."),
+        )
+        print(f"Successfully loaded weights")
 
         # We take all layers except for the final adaptive average pooling and the fully connected layer.
         feature_extractor = nn.Sequential(*list(full_model.children())[:-2])
