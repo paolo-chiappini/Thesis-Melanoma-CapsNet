@@ -1,7 +1,8 @@
-from torch.utils.data import Dataset
 import os
+
 import pandas as pd
 from PIL import Image
+from torch.utils.data import Dataset
 
 
 class BaseDataset(Dataset):
@@ -47,7 +48,8 @@ class BaseDataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        # return image, label
+        return {"images": image, "labels": label}
 
     def check_missing_files(self, full_image_path, image_col):
         missing = 0

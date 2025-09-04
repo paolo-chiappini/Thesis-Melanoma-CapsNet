@@ -15,7 +15,7 @@ from .model_transfer import TransferModel
 
 def get_model(config, data_loader, device):
     first_key = list(data_loader.keys())[0]
-    img_shape = data_loader[first_key].dataset[0]["image"].numpy().shape
+    img_shape = data_loader[first_key].dataset[0]["images"].numpy().shape
 
     model_classes = get_classes_from_module(
         module_startswith="model", parent_class=nn.Module
@@ -31,7 +31,7 @@ def get_model(config, data_loader, device):
 
     if "num_attributes" in accepted_args:
         kwargs["num_attributes"] = (
-            data_loader[first_key].dataset[0]["visual_features"].shape[0]
+            data_loader[first_key].dataset[0]["visual_attributes_targets"].shape[0]
         )
 
     return model_class(img_shape=img_shape, device=device, **kwargs)

@@ -1,17 +1,9 @@
 from utils.commons import compute_weighted_accuracy
+
 from .trainer_base import BaseTrainer
 
 
 class SanityCheckTrainer(BaseTrainer):
-    def prepare_batch(self, batch):
-        images, labels, visual_attributes, masks = batch
-        return {
-            "inputs": images.to(self.device),
-            "labels": labels.to(self.device),
-            "visual_attributes": visual_attributes.to(self.device),
-            "masks": masks.to(self.device),
-        }
-
     def compute_loss(self, outputs, batch_data):
         predicted_vas = outputs
         return self.criterion(
@@ -35,4 +27,4 @@ class SanityCheckTrainer(BaseTrainer):
         }
 
     def unpack_model_outputs(self, outputs):
-        return {"preds": outputs}
+        return {"logits": outputs["encodings"]}

@@ -9,7 +9,7 @@ from albumentations.pytorch import ToTensorV2
 from sklearn.model_selection import StratifiedGroupKFold
 from torch.utils.data import DataLoader, Subset
 
-from .datasets.augmentations import get_transforms
+from datasets.augmentations import get_transforms
 
 
 def get_all_subclasses(cls):

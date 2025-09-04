@@ -1,6 +1,7 @@
-from .base_runner import BaseRunner
-from utils.losses import get_loss
+from losses import create_combined_loss
 from trainers import get_trainer
+
+from .base_runner import BaseRunner
 
 
 class TestRunner(BaseRunner):
@@ -9,7 +10,7 @@ class TestRunner(BaseRunner):
         self.compute_weights()
 
         self.build_model(load_weights=True)
-        self.loss_criterion = get_loss(
+        self.loss_criterion = create_combined_loss(
             config=self.config["trainer"]["loss"],
             class_weights=self.weights.get("class_weights"),
             attribute_weights=self.weights.get("attribute_weights"),

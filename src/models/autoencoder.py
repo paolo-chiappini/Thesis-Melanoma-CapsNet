@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+
 from layers import ConvDecoder
 from utils.layer_output_shape import get_network_output_shape
 
@@ -81,6 +82,7 @@ class ConvAutoencoder(nn.Module):
 
     def forward(self, x):
         z = self.encode(x)
-        return z, self.decode(
-            z
-        )  # TODO: this isn't very good, see notes on Obsidian (2025-07-28)
+        # return z, self.decode(
+        #     z
+        # )  # TODO: this isn't very good, see notes on Obsidian (2025-07-28)
+        return {"encodings": z, "reconstructions": self.decode(z)}

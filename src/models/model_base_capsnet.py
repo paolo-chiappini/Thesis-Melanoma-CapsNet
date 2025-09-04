@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from layers import PrimaryCapsules, RoutingCapsules, MalignancyPredictor, ConvDecoder
+
+from layers import ConvDecoder, MalignancyPredictor, PrimaryCapsules, RoutingCapsules
 from utils.layer_output_shape import get_network_output_shape
 
 _PRIMARY_CAPS_IDX = 1

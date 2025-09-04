@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
+
 from layers import (
     Conv2d_BN,
+    ConvDecoder,
+    MalignancyPredictor,
     PrimaryCapsules,
     RoutingCapsules,
-    MalignancyPredictor,
-    ConvDecoder,
 )
 from utils.layer_output_shape import get_network_output_shape
 
@@ -172,4 +173,10 @@ class CapsuleNetworkWithAttributes32(nn.Module):
         # 4. reconstuct images from poses
         reconstructions = self.decode(attribute_poses, y_mask)
 
-        return attribute_logits, reconstructions, malignancy_scores, attribute_poses
+        # return attribute_logits, reconstructions, malignancy_scores, attribute_poses
+        return {
+            "attribute_logits": attribute_logits,
+            "reconstructions": reconstructions,
+            "malignancy_scores": malignancy_scores,
+            "attribute_poses": attribute_poses,
+        }

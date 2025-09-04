@@ -14,9 +14,9 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 
 from config.device_config import get_device
+from datasets.augmentations import get_transforms
+from src.datasets.loaders import get_dataset
 from utils.commons import build_dataloaders
-from utils.datasets.augmentations import get_transforms
-from utils.loaders import get_dataset
 
 
 class EarlyStopper:

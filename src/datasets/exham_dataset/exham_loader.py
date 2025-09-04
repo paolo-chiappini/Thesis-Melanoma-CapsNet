@@ -1,10 +1,12 @@
+import os
+
 import cv2
 import numpy as np
-from ..base_dataset import BaseDataset
-import os
 import torch
-from PIL import Image
 import torchvision.transforms as T
+from PIL import Image
+
+from ..base_dataset import BaseDataset
 
 # TODO: make this better
 normalize_transform = T.Compose([T.ToTensor()])
@@ -150,15 +152,15 @@ class EXHAMDataset(BaseDataset):
                 ), f"Image and masks have different shapes for lesion {image_id}. Mask size {mask.shape}. Image size: {image.shape}."
 
         label = torch.tensor(label, dtype=torch.int)
-        visual_features = record[self.visual_attributes].values.astype(float)
-        visual_features = torch.tensor(visual_features, dtype=torch.float)
+        visual_attributes = record[self.visual_attributes].values.astype(float)
+        visual_attributes = torch.tensor(visual_attributes, dtype=torch.float)
 
         # return (image, label, visual_features, segmentation)
         return {
-            "image": image,
-            "label": label,
-            "visual_features": visual_features,
-            "segmentation": lesion_mask,
+            "images": image,
+            "malignancy_targets": label,
+            "visual_attributes_targets": visual_attributes,
+            "lesion_masks": lesion_mask,
             "va_masks": attribute_masks,
         }
 

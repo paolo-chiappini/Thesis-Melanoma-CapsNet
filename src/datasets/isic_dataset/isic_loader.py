@@ -81,8 +81,8 @@ class ISICDataset(BaseDataset):
 
         label = torch.tensor(LABEL_MAP[label], dtype=torch.float)
 
-        # return {"image": image, "label": label}
-        return image, label
+        return {"images": image, "malignancy_targets": label}
+        # return image, label
 
     def check_missing_files(self):
         full_image_path = lambda _: self.image_path

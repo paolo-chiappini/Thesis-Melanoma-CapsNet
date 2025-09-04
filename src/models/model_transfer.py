@@ -16,11 +16,11 @@ class TransferModel(nn.Module):
 
         num_filters = self.encoder.fc.in_features
         self.encoder.fc = nn.Sequential(
-            nn.Dropout(p=0.5),
-            nn.Linear(num_filters, num_classes)
+            nn.Dropout(p=0.5), nn.Linear(num_filters, num_classes)
         )
 
     def forward(self, x):
         x = self.preprocess(x)
         out = self.encoder(x)
-        return out
+        # return out
+        return {"encodings": out}

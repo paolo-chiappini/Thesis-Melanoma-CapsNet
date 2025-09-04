@@ -1,41 +1,37 @@
-from .trainer_base import BaseTrainer
 import torch
 import torch.nn as nn
+
+from losses.msr_loss import MaskedMSELoss
 from utils.commons import compute_weighted_accuracy
-from utils.losses.losses_msr import MaskedMSELoss
+
+from .trainer_base import BaseTrainer
 
 _CORRECT_THRESHOLD = 0.5
 
 
 class CapsNetTrainerMSR(BaseTrainer):
-    def prepare_batch(self, batch):
-        return {
-            "inputs": batch["image"].to(self.device),
-            "labels": batch["label"].to(self.device),
-            "visual_attributes": batch["visual_features"].to(self.device),
-            "masks": batch["segmentation"].to(self.device),
-            "va_masks": batch["va_masks"].to(self.device),
-        }
 
     def compute_loss(self, outputs, batch_data):
-        # TODO: use unpack method here?
-        images = batch_data["inputs"]
-        masks = batch_data["masks"]
+        images = batch_data["images"]
         va_masks = batch_data["va_masks"]
+        attribute_poses = outputs["attribute_poses"]
 
-        attribute_logits, reconstructions, malignancy_scores, attribute_poses = outputs
-        total_loss = self.criterion(
-            attribute_logits,
-            attribute_poses,
-            batch_data["visual_attributes"],
-            malignancy_scores,
-            torch.eye(len(malignancy_scores[0])).to(self.device)[
-                batch_data["labels"]
-            ],  # one hot encoded labels
-            images,
-            reconstructions,
-            masks,
-        )
+        # total_loss = self.criterion(
+        #     outputs["attribute_logits"],
+        #     outputs["attribute_poses"],
+        #     batch_data["visual_attributes_targets"],
+        #     outputs["malignancy_scores"],
+        #     torch.eye(len(outputs["malignancy_scores"][0])).to(
+        #         self.device
+        #     )[  # TODO: move OHE
+        #         batch_data["malignancy_targets"]
+        #     ],  # one hot encoded labels
+        #     images,
+        #     outputs["reconstructions"],
+        #     masks,
+        # )
+
+        total_loss = self.criterion(model_outputs=outputs, targets=batch_data)
 
         # TODO: temporary MSR Loss implementation
         alpha = 1.0
@@ -75,19 +71,19 @@ class CapsNetTrainerMSR(BaseTrainer):
     def compute_custom_metrics(self, outputs, batch_data):
         outputs_dict = self.unpack_model_outputs(outputs)
 
-        _, predicted = torch.max(outputs_dict["malignancy"], 1)
-        labels = batch_data["labels"].to(self.device)
+        _, predicted = torch.max(outputs_dict["malignancy_scores"], 1)
+        labels = batch_data["malignancy_targets"].to(self.device)
 
         weighted_accuracy = compute_weighted_accuracy(
             predicted=predicted,
             target=labels,
             weights=self.class_weights,
-            num_labels=outputs_dict["malignancy"].size(1),
+            num_labels=outputs_dict["malignancy_scores"].size(1),
         )
 
-        predicted_vas = outputs_dict["preds"]
+        predicted_vas = outputs_dict["logits"]
         predicted_vas = (predicted_vas >= _CORRECT_THRESHOLD).float()  # binarize
-        attributes = batch_data["visual_attributes"].to(self.device)
+        attributes = batch_data["visual_attributes_targets"].to(self.device)
 
         weighted_accuracy_vas = compute_weighted_accuracy(
             predicted=predicted_vas,
@@ -102,10 +98,13 @@ class CapsNetTrainerMSR(BaseTrainer):
         }
 
     def unpack_model_outputs(self, outputs):
-        va_scores, reconstructions, malignancy_scores, capsules = outputs
-        return {
-            "preds": va_scores,
-            "reconstructions": reconstructions,
-            "malignancy": malignancy_scores,
-            "capsule_poses": capsules,
-        }
+        # va_scores, reconstructions, malignancy_scores, capsules = outputs
+        # return {
+        #     "preds": va_scores,
+        #     "reconstructions": reconstructions,
+        #     "malignancy": malignancy_scores,
+        #     "capsule_poses": capsules,
+        # }
+
+        outputs.update({"logits": outputs["attribute_logits"]})
+        return outputs

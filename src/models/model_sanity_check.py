@@ -13,4 +13,5 @@ class SanityCheckModel(nn.Module):
         self.backbone.fc = nn.Linear(in_features=in_features, out_features=num_classes)
 
     def forward(self, x):
-        return self.backbone(x)
+        # return self.backbone(x)
+        return {"encodings": self.backbone(x)}

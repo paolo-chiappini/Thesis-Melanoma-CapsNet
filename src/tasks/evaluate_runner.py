@@ -1,13 +1,14 @@
-from .base_runner import BaseRunner
-from utils.losses import get_loss
+from losses import create_combined_loss
 from trainers import get_trainer
 from utils.evaluation import (
-    evaluate_reconstruction,
     compute_capsule_activations,
+    evaluate_reconstruction,
     mutual_information_capsules,
     summarize_evaluation,
 )
 from utils.visualization import plot_mi_heatmap
+
+from .base_runner import BaseRunner
 
 
 class EvaluateRunner(BaseRunner):
@@ -15,7 +16,9 @@ class EvaluateRunner(BaseRunner):
         self.prepare_dataset(is_train=False)
 
         self.build_model(load_weights=True)
-        self.loss_criterion = get_loss(config=self.config["trainer"]["loss"])
+        self.loss_criterion = create_combined_loss(
+            config=self.config["trainer"]["loss"]
+        )
 
     def execute(self):
         trainer = get_trainer(

@@ -1,9 +1,10 @@
-from abc import ABC, abstractmethod
-import torch
 import os
-from tqdm import tqdm
+from abc import ABC, abstractmethod
 from datetime import datetime
+
 import numpy as np
+import torch
+from tqdm import tqdm
 
 
 class BaseTrainer(ABC):
@@ -64,15 +65,14 @@ class BaseTrainer(ABC):
         else:
             raise TypeError(f"Unsupported weight type: {type(value)}")
 
-    @abstractmethod
-    def prepare_batch(self, batch):
+    def prepare_batch(self, batch: dict):
         """
-        Unpacks a batch and moves it to device, return data needed for forward pass and loss computation.
+        Moves all items of the batch to the device.
 
         Args:
-            batch (Tuple): Tuple of items used in the training loop (e.g. (image, label, mask))
+            batch (dict): contains the data loaded from a dataset loader.
         """
-        raise NotImplementedError
+        return {k: v.to(self.device) for k, v in batch.items()}
 
     @abstractmethod
     def unpack_model_outputs(self, outputs):
@@ -110,12 +110,12 @@ class BaseTrainer(ABC):
         for metric in self.metrics.values():
             metric.reset()
 
-    def _update_metrics(self, outputs, batch_data):
+    def _update_metrics(self, outputs: dict, batch_data: dict):
         outputs_dict = self.unpack_model_outputs(outputs)
 
-        preds = torch.sigmoid(outputs_dict["preds"]) > 0.5
+        preds = torch.sigmoid(outputs_dict["logits"]) > 0.5
         preds = preds.int()
-        targets = batch_data["visual_attributes"].int()
+        targets = batch_data["visual_attributes_targets"].int()
         for name, metric in self.metrics.items():
             if "attr_" in name:
                 idx = int(name.split("_")[-1])
@@ -165,7 +165,7 @@ class BaseTrainer(ABC):
             batch_data = self.prepare_batch(batch)
             self.optimizer.zero_grad()
 
-            outputs = self.model(batch_data["inputs"])
+            outputs = self.model(batch_data["images"])
             losses = self.compute_loss(outputs, batch_data)
             losses = losses if isinstance(losses, dict) else {"loss": losses}
             total_loss = sum(losses.values())
@@ -227,7 +227,7 @@ class BaseTrainer(ABC):
         with torch.no_grad():
             for i, batch in enumerate(loader):
                 batch_data = self.prepare_batch(batch)
-                images = batch_data["inputs"]
+                images = batch_data["images"]
                 outputs = self.model(images)
                 outputs_dict = self.unpack_model_outputs(outputs)
                 losses = self.compute_loss(outputs, batch_data)
@@ -272,7 +272,7 @@ class BaseTrainer(ABC):
             self.early_stop = self.early_stop or logs.get("stop", False)
 
             if "reconstructions" in outputs_dict:
-                masks = batch_data["masks"]
+                masks = batch_data["lesion_masks"]
                 callback_manager.on_reconstruction(
                     images[:8] * masks[:8],
                     outputs_dict["reconstructions"][:8],

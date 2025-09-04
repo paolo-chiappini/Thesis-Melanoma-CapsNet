@@ -20,19 +20,15 @@ model:
     routing_algorithm: sigmoid
 
 trainer:
-    name: CapsNetTrainerVAs
+    name: CapsNetTrainerMSR
     epochs: 70
     learning_rate: 0.001
     lr_decay: 0.96
     loss:
-        name: CombinedLoss
-        margin_loss_lambda: 0 # Capsule margin loss balance
-        margin_loss_gamma: 0 # Focal term, common starting value
-        reconstruction_loss_scale: 0.00001 # Lowered to avoid dominating others
-        attribute_loss_lambda: 1.0 # Main classification task
-        malignancy_loss_lambda: 1.0 # Secondary classificaiton task
-        segmentation_loss_lambda: 0 # Often scaled up because segmentation losses tend to be smaller in magnitude
-        tc_loss_beta: 0.05 # Total correlation loss usually small to avoid over-regularizing
+        components:
+            AttributeLoss:
+                lambda: 1.0
+                params: {}
 
 callbacks:
     - name: PlotCallback
@@ -54,10 +50,8 @@ metrics:
 system:
     seed: 123
     augment: True
-    save_name: baseline_model_FIXED
+    save_name: experiment_msr
     save_path: ./checkpoints/
-    has_visual_attributes: True
-    use_weighted_metrics: False
 
 perturbation:
     num_samples: 2

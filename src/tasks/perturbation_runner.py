@@ -1,9 +1,10 @@
 import torch
 from tqdm import tqdm
-from .base_runner import BaseRunner
-from utils.losses import get_loss
-from trainers import get_trainer
+
+from losses import create_combined_loss
 from utils.visualization.capsule_contribution import perturb_all_capsules
+
+from .base_runner import BaseRunner
 
 
 class PerturbationRunner(BaseRunner):
@@ -11,7 +12,9 @@ class PerturbationRunner(BaseRunner):
         self.prepare_dataset(is_train=False)
 
         self.build_model(load_weights=True)
-        self.loss_criterion = get_loss(config=self.config["trainer"]["loss"])
+        self.loss_criterion = create_combined_loss(
+            config=self.config["trainer"]["loss"]
+        )
 
     def execute(self):
         sampled_images = self.get_samples_from_classes(

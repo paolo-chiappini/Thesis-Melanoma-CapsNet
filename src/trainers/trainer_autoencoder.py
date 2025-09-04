@@ -1,23 +1,17 @@
-from .trainer_base import BaseTrainer
-import torch
-import torch.nn.functional as F
 import numpy as np
-from skimage.metrics import structural_similarity as ssim
+import torch.nn.functional as F
 from skimage.metrics import peak_signal_noise_ratio as psnr
+from skimage.metrics import structural_similarity as ssim
+
+from .trainer_base import BaseTrainer
 
 
 class AutoEncoderTrainer(BaseTrainer):
-
-    def prepare_batch(self, batch):
-        images = batch["image"]
-        images = images.to(self.device)
-        return {"inputs": images, "targets": images}
-
     def compute_loss(self, outputs, batch_data):
-        return self.criterion(outputs, batch_data["targets"])
+        return self.criterion(outputs, batch_data["images"])
 
     def compute_custom_metrics(self, outputs, batch_data):
-        targets = batch_data["targets"]
+        targets = batch_data["images"]
         _, preds = outputs
 
         # MSE

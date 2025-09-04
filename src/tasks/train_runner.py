@@ -1,7 +1,8 @@
-from .base_runner import BaseRunner
-from utils.losses import get_loss
+from callbacks import CallbackManager, get_callbacks
+from losses import create_combined_loss
 from trainers import get_trainer
-from utils.callbacks import get_callbacks, CallbackManager
+
+from .base_runner import BaseRunner
 
 
 class TrainRunner(BaseRunner):
@@ -10,7 +11,7 @@ class TrainRunner(BaseRunner):
         self.compute_weights()
 
         self.build_model(load_weights=False)
-        self.loss_criterion = get_loss(
+        self.loss_criterion = create_combined_loss(
             config=self.config["trainer"]["loss"],
             class_weights=self.weights.get("class_weights"),
             attribute_weights=self.weights.get("attribute_weights"),
@@ -33,7 +34,7 @@ class TrainRunner(BaseRunner):
         callbacks = get_callbacks(callback_config=self.config.get("callbacks", []))
         callback_manager = CallbackManager(callbacks=callbacks)
 
-        print('Running training with class weights', self.weights.get('class_weights'))
+        print("Running training with class weights", self.weights.get("class_weights"))
 
         trainer.run(self.config["trainer"]["epochs"], callback_manager=callback_manager)
         trainer.test(split="val")

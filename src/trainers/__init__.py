@@ -1,7 +1,7 @@
 import torch.optim as optim
 
+from metrics import build_metrics
 from utils.commons import get_classes_from_module
-from utils.metrics import build_metrics
 
 from .trainer_autoencoder import AutoEncoderTrainer
 from .trainer_base import BaseTrainer
@@ -48,7 +48,9 @@ def get_trainer(
     first_key = list(data_loader.keys())[0]
 
     try:
-        num_attributes = data_loader[first_key].dataset[0][2].shape[0]
+        num_attributes = (
+            data_loader[first_key].dataset[0]["visual_attributes_targets"].shape[0]
+        )
     except:
         num_attributes = 0
 
