@@ -5,6 +5,7 @@ from utils.commons import get_classes_from_module
 from .losses import *
 from .losses_ae import *
 from .msr_loss import *
+from .tc_loss import *
 
 
 class CombinedLoss(nn.Module):

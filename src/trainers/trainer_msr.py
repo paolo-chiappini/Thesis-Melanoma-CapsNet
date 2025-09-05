@@ -33,7 +33,6 @@ class CapsNetTrainerMSR(BaseTrainer):
 
         total_loss = self.criterion(model_outputs=outputs, targets=batch_data)
 
-        # TODO: temporary MSR Loss implementation
         alpha = 1.0
         beta = 1.0
 

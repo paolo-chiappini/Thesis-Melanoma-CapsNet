@@ -22,7 +22,7 @@ class MaskedMSELoss(nn.Module):
         # Ensure mask is broadcastable to the same shape as input/target
         mask = mask.expand_as(target)
 
-        squared_error = F.mse_loss(input, target, reduction="none")
+        squared_error = F.mse_loss(input, target * mask, reduction="none")
 
         # Apply the mask. This zeroes out the error where the mask is 0.
         masked_squared_error = squared_error * mask
