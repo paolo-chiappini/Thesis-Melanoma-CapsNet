@@ -76,7 +76,7 @@ class CapsNetTrainerMSR(BaseTrainer):
                 lesion_masks=lesion_masks,
                 va_masks=va_masks,
                 epoch=self.current_epoch,
-                phase="val",
+                phase=self.current_phase,
             )
 
         total_loss.update({"msr_loss": total_recon_loss})

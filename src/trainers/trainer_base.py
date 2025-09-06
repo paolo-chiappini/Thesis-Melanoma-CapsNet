@@ -34,6 +34,7 @@ class BaseTrainer(ABC):
         self.early_stop = False
         self.current_epoch = 0
         self.current_batch = 0
+        self.current_phase = "train"
 
         os.makedirs(checkpoints_dir, exist_ok=True)
 
@@ -301,7 +302,9 @@ class BaseTrainer(ABC):
 
     def run(self, epochs, callback_manager=None):
         for epoch in range(1, epochs + 1):
+            self.current_phase = "train"
             train_loss = self.train_one_epoch(epoch, callback_manager)
+            self.current_phase = "val"
             val_loss = self.evaluate(epoch, callback_manager)
 
             print(
@@ -328,6 +331,7 @@ class BaseTrainer(ABC):
         all_custom_metrics = []
         running_loss = 0.0
 
+        self.current_phase = "test"
         loader = self.loaders[split]
         with torch.no_grad():
             for batch in tqdm(loader, desc=f"Testing on {split}"):
