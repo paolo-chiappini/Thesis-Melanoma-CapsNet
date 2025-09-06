@@ -1,6 +1,6 @@
 import torch
-import torch.nn as nn
 
+from callbacks import CurrentEpochExampleCallback
 from losses.msr_loss import MaskedMSELoss
 from utils.commons import compute_weighted_accuracy
 
@@ -8,11 +8,14 @@ from .trainer_base import BaseTrainer
 
 _CORRECT_THRESHOLD = 0.5
 
+example_plotter = CurrentEpochExampleCallback(track="val")
+
 
 class CapsNetTrainerMSR(BaseTrainer):
 
     def compute_loss(self, outputs, batch_data):
         images = batch_data["images"]
+        lesion_masks = batch_data["lesion_masks"]
         va_masks = batch_data["va_masks"]
         attribute_poses = outputs["attribute_poses"]
 
@@ -36,25 +39,26 @@ class CapsNetTrainerMSR(BaseTrainer):
         alpha = 1.0
         beta = 1.0
 
-        global_recon_criterion = nn.MSELoss()
+        global_recon_criterion = MaskedMSELoss()
         local_recon_criterion = MaskedMSELoss()
 
         global_reconstruction = self.model.decode(attribute_poses)
-        loss_global_recon = global_recon_criterion(global_reconstruction, images)
+        loss_global_recon = global_recon_criterion(
+            global_reconstruction, images, lesion_masks
+        )
 
         loss_msr = 0.0
         N, K, pose_dim = attribute_poses.shape
         H, W = images.shape[2], images.shape[3]
 
+        local_reconstructions = []
         for k in range(K):
-            single_capsule_poses = torch.zeros_like(
-                attribute_poses, device=attribute_poses.device
-            )
-            single_capsule_poses[:, k, :] = attribute_poses[
-                :, k, :
-            ]  # isolate the k-th capsule
+            pose_mask = torch.zeros_like(attribute_poses, device=attribute_poses.device)
+            pose_mask[:, k, :] = 1
 
-            local_reconstruction_k = self.model.decode(single_capsule_poses)
+            local_reconstruction_k = self.model.decode(attribute_poses, pose_mask)
+            if self.current_batch == len(self.loaders["val"]):
+                local_reconstructions.append(local_reconstruction_k)
 
             masks_k = va_masks[:, k, :, :].unsqueeze(1)
 
@@ -63,6 +67,17 @@ class CapsNetTrainerMSR(BaseTrainer):
         loss_msr_avg = loss_msr / K
 
         total_recon_loss = alpha * loss_global_recon + beta * loss_msr_avg
+
+        if self.current_batch == len(self.loaders["val"]):
+            example_plotter.on_reconstruction(
+                images=images,
+                global_reconstructions=global_reconstruction,
+                capsule_reconstructions=torch.stack(local_reconstructions, dim=1),
+                lesion_masks=lesion_masks,
+                va_masks=va_masks,
+                epoch=self.current_epoch,
+                phase="val",
+            )
 
         total_loss.update({"msr_loss": total_recon_loss})
         return total_loss

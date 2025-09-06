@@ -1,0 +1,64 @@
+dataset:
+    name: EXHAMDataset
+    root: ./data/EXHAMDataset
+    metadata_path: null
+    image_extension: null
+    batch_size: 10
+    val_size: 0.09
+    test_size: 0.9
+
+preprocess:
+    img_size: 256
+
+model:
+    name: CapsNetWithAttributesMLP
+    channels: 3
+    primary_dim: 8
+    pose_dim: 16
+    num_classes: 2
+    routing_steps: 3
+    routing_algorithm: sigmoid
+
+trainer:
+    name: CapsNetTrainerMSR
+    epochs: 70
+    learning_rate: 0.001
+    lr_decay: 0.96
+    loss:
+        components:
+            AttributeLoss:
+                lambda: 1.0
+                params: {}
+
+callbacks:
+    - name: PlotCallback
+    - name: ReconstructionCallback
+      frequency: 7
+    # - name: CurrentEpochExampleCallback # To implement
+    #   frequency: 1
+    #   track: train
+    - name: EarlyStoppingCallback
+      patience: 10
+      min_delta: 0.03
+      restore_best_weights: True
+
+metrics:
+    - type: f1
+      per_attribute: True
+    - type: precision
+      per_attribute: True
+    - type: recall
+      per_attribute: True
+
+system:
+    seed: 123
+    augment: True
+    save_name: experiment_msr
+    save_path: ./checkpoints/
+
+perturbation:
+    num_samples: 2
+    is_global: True
+
+evaluate:
+    split_size: 0.2

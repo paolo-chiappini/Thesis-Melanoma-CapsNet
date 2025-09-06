@@ -102,7 +102,7 @@ class CapsNetWithAttributesMLP(nn.Module):
             layers=self.decoder_layers,
         )
 
-        self.attributes_classifier = AttributesPredictor(pose_dim=pose_dim)
+        self.attributes_classifier = AttributesPredictor(capsule_pose_dim=pose_dim)
 
         attr_caps_output_dim = get_network_output_shape(
             primary_caps_output_shape,

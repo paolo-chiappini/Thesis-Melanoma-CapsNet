@@ -1,8 +1,9 @@
 from .callback import Callback
-from .callback_manager import CallbackManager
-from .callback_reconstruction import ReconstructionCallback
-from .callback_plot import PlotCallback
+from .callback_current_epoch_example import CurrentEpochExampleCallback
 from .callback_early_stopping import EarlyStoppingCallback
+from .callback_manager import CallbackManager
+from .callback_plot import PlotCallback
+from .callback_reconstruction import ReconstructionCallback
 
 callbacks = {cls.__name__: cls for cls in Callback.__subclasses__()}
 

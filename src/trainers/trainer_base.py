@@ -32,6 +32,8 @@ class BaseTrainer(ABC):
         self.class_weights = None
         self.attribute_weights = None
         self.early_stop = False
+        self.current_epoch = 0
+        self.current_batch = 0
 
         os.makedirs(checkpoints_dir, exist_ok=True)
 
@@ -154,6 +156,8 @@ class BaseTrainer(ABC):
     def train_one_epoch(self, epoch, callback_manager=None, split="train"):
         assert split in self.loaders, f"'{split}' loader not found in self.loaders."
 
+        self.current_epoch = epoch
+
         self.model.train()
         self._reset_metrics()
         all_custom_metrics = []
@@ -162,6 +166,8 @@ class BaseTrainer(ABC):
 
         progress = tqdm(loader, desc=f"Train Epoch {epoch}")
         for i, batch in enumerate(progress):
+            self.current_batch = i
+
             batch_data = self.prepare_batch(batch)
             self.optimizer.zero_grad()
 
@@ -218,6 +224,8 @@ class BaseTrainer(ABC):
     def evaluate(self, epoch, callback_manager=None, split="val"):
         assert split in self.loaders, f"'{split}' loader not found in self.loaders."
 
+        self.current_epoch = epoch
+
         self.model.eval()
         self._reset_metrics()
         all_custom_metrics = []
@@ -226,6 +234,8 @@ class BaseTrainer(ABC):
 
         with torch.no_grad():
             for i, batch in enumerate(loader):
+                self.current_batch = i
+
                 batch_data = self.prepare_batch(batch)
                 images = batch_data["images"]
                 outputs = self.model(images)

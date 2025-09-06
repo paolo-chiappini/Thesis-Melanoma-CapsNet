@@ -7,10 +7,10 @@ from utils.commons import get_classes_from_module
 from .autoencoder import ConvAutoencoder
 from .model_base_capsnet import CapsuleNetworkBase
 from .model_conv_attributes_32 import CapsuleNetworkWithAttributes32
-from .model_conv_va_small import CapsuleNetworkWithAttributesSmall
 from .model_pretrained import ModelPretrainedCapsnet
 from .model_sanity_check import SanityCheckModel
 from .model_transfer import TransferModel
+from .variants.model_capsnet_attr_mlp import CapsNetWithAttributesMLP
 
 
 def get_model(config, data_loader, device):
