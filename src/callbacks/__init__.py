@@ -1,5 +1,4 @@
 from .callback import Callback
-from .callback_current_epoch_example import CurrentEpochExampleCallback
 from .callback_early_stopping import EarlyStoppingCallback
 from .callback_manager import CallbackManager
 from .callback_plot import PlotCallback

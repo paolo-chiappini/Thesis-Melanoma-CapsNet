@@ -1,14 +1,14 @@
 import torch
 
-from callbacks import CurrentEpochExampleCallback
 from losses.msr_loss import MaskedMSELoss
 from utils.commons import compute_weighted_accuracy
+from utils.visualization.plot_reconstruction_examples import (
+    plot_reconstruction_examples,
+)
 
 from .trainer_base import BaseTrainer
 
 _CORRECT_THRESHOLD = 0.5
-
-example_plotter = CurrentEpochExampleCallback(track="val")
 
 
 class CapsNetTrainerMSR(BaseTrainer):
@@ -39,12 +39,12 @@ class CapsNetTrainerMSR(BaseTrainer):
         alpha = 1.0
         beta = 1.0
 
-        global_recon_criterion = MaskedMSELoss()
-        local_recon_criterion = MaskedMSELoss()
+        global_recon_criterion = MaskedMSELoss(background_penalization=0.1)
+        local_recon_criterion = MaskedMSELoss(background_penalization=0.1)
 
         global_reconstruction = self.model.decode(attribute_poses)
         loss_global_recon = global_recon_criterion(
-            global_reconstruction, images, lesion_masks
+            global_reconstruction, images * lesion_masks, lesion_masks
         )
 
         loss_msr = 0.0
@@ -57,26 +57,29 @@ class CapsNetTrainerMSR(BaseTrainer):
             pose_mask[:, k, :] = 1
 
             local_reconstruction_k = self.model.decode(attribute_poses, pose_mask)
-            if self.current_batch == len(self.loaders["val"]):
+            if self.current_batch == len(self.loaders["val"]) - 1:
                 local_reconstructions.append(local_reconstruction_k)
 
             masks_k = va_masks[:, k, :, :].unsqueeze(1)
 
-            loss_msr_k = local_recon_criterion(local_reconstruction_k, images, masks_k)
+            loss_msr_k = local_recon_criterion(
+                local_reconstruction_k, images * masks_k, masks_k
+            )
             loss_msr += loss_msr_k
         loss_msr_avg = loss_msr / K
 
         total_recon_loss = alpha * loss_global_recon + beta * loss_msr_avg
 
-        if self.current_batch == len(self.loaders["val"]):
-            example_plotter.on_reconstruction(
+        if self.current_batch == len(self.loaders["val"]) - 1:
+            plot_reconstruction_examples(
                 images=images,
-                global_reconstructions=global_reconstruction,
-                capsule_reconstructions=torch.stack(local_reconstructions, dim=1),
+                global_recons=global_reconstruction,
+                capsule_recons=torch.stack(local_reconstructions, dim=1),
                 lesion_masks=lesion_masks,
                 va_masks=va_masks,
                 epoch=self.current_epoch,
                 phase=self.current_phase,
+                va_mask_labels=self.loaders["val"].dataset.dataset.visual_attributes,
             )
 
         total_loss.update({"msr_loss": total_recon_loss})

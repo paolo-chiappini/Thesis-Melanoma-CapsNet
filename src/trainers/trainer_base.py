@@ -336,7 +336,7 @@ class BaseTrainer(ABC):
         with torch.no_grad():
             for batch in tqdm(loader, desc=f"Testing on {split}"):
                 batch_data = self.prepare_batch(batch)
-                outputs = self.model(batch_data["inputs"])
+                outputs = self.model(batch_data["images"])
 
                 losses = self.compute_loss(outputs, batch_data)
                 losses = losses if isinstance(losses, dict) else {"loss": losses}

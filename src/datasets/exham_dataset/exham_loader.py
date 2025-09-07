@@ -1,6 +1,5 @@
 import os
 
-import cv2
 import numpy as np
 import torch
 import torchvision.transforms as T
@@ -165,18 +164,21 @@ class EXHAMDataset(BaseDataset):
         }
 
     def check_missing_files(self):
-        full_image_path = lambda _: self.image_path
+        def full_image_path(_):
+            return self.image_path
 
         super().check_missing_files(full_image_path, "image_id")
 
     def load_va_masks(self, path, lesion_id, img_size):
         files_for_lesion = []
         for va in self.visual_attributes:
-            file_path = os.path.join(path, f"{lesion_id}_{va}.{self.image_extension}")
+            file_path = os.path.join(
+                path, f"{lesion_id}_{va}.{self.segmentation_extension}"
+            )
             file_path = os.path.normpath(file_path)
             if os.path.exists(file_path):
-                Image.open(file_path).convert("L")
-                mask.resize(size=img_size)
+                mask = Image.open(file_path).convert("L")
+                mask = mask.resize(size=img_size)
             else:
                 mask = Image.new("L", img_size, 0)  # create blank mask
 

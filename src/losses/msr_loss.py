@@ -3,8 +3,18 @@ import torch.nn.functional as F
 
 
 class MaskedMSELoss(nn.Module):
-    def __init__(self):
+    def __init__(self, background_penalization=0.0, normalize="total"):
+        """
+        Args:
+            background_penalization (float): Weight for background MSE.
+            normalize (str): 'total' (normalize over all pixels),
+                             'foreground' (normalize only by lesion pixels),
+                             or 'per_region' (normalize each region separately).
+        """
         super(MaskedMSELoss, self).__init__()
+        self.background_penalization = background_penalization
+        assert normalize in ["total", "foreground", "per_region"]
+        self.normalize = normalize
 
     def forward(self, input, target, mask):
         """
@@ -19,15 +29,37 @@ class MaskedMSELoss(nn.Module):
         Returns:
         - loss (torch.Tensor): The masked MSE loss.
         """
-        # Ensure mask is broadcastable to the same shape as input/target
-        mask = mask.expand_as(target)
+        mask = mask.expand_as(target).float()
 
-        squared_error = F.mse_loss(input, target * mask, reduction="none")
+        squared_error = F.mse_loss(input, target, reduction="none")
 
-        # Apply the mask. This zeroes out the error where the mask is 0.
-        masked_squared_error = squared_error * mask
+        lesion_error = squared_error * mask
+        background_error = squared_error * (1 - mask)
 
-        num_pixels_in_mask = mask.sum()
-        loss = masked_squared_error.sum() / (num_pixels_in_mask + 1e-8)
+        if self.normalize == "total":
+            # Normalize over all pixels
+            total_pixels = float(input.numel())
+            loss = (
+                lesion_error.sum()
+                + self.background_penalization * background_error.sum()
+            ) / total_pixels
+
+        elif self.normalize == "foreground":
+            # Normalize over lesion pixels only
+            lesion_pixels = mask.sum() + 1e-8
+            loss = (
+                lesion_error.sum()
+                + self.background_penalization * background_error.sum()
+            ) / lesion_pixels
+
+        elif self.normalize == "per_region":
+            # Normalize each region separately
+            lesion_pixels = mask.sum() + 1e-8
+            background_pixels = (1 - mask).sum() + 1e-8
+
+            lesion_loss = lesion_error.sum() / lesion_pixels
+            background_loss = background_error.sum() / background_pixels
+
+            loss = lesion_loss + self.background_penalization * background_loss
 
         return loss
