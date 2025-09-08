@@ -96,7 +96,7 @@ class BaseTrainer(ABC):
             outputs (Tuple): outputs of the model
             batch_data (Tuple): data of the current batch
         """
-        raise NotImplementedError
+        return self.criterion(model_outputs=outputs, targets=batch_data)
 
     @abstractmethod
     def compute_custom_metrics(self, outputs, batch_data):
