@@ -83,6 +83,8 @@ class EXHAMDataset(BaseDataset):
         ]
         self.labels = self.data[self.label]
 
+        self.data["None"] = 1
+
         self.visual_features = torch.tensor(
             self.data[self.visual_attributes].values, dtype=torch.float
         )
@@ -172,6 +174,14 @@ class EXHAMDataset(BaseDataset):
     def load_va_masks(self, path, lesion_id, img_size):
         files_for_lesion = []
         for va in self.visual_attributes:
+            if va == "None":
+                # Create the None mask
+                union_mask = np.any(files_for_lesion, axis=0).astype(np.uint8)
+                inverted_mask = (1 - union_mask) * 255
+
+                files_for_lesion.append(inverted_mask)
+                continue
+
             file_path = os.path.join(
                 path, f"{lesion_id}_{va}.{self.segmentation_extension}"
             )
@@ -183,11 +193,5 @@ class EXHAMDataset(BaseDataset):
                 mask = Image.new("L", img_size, 0)  # create blank mask
 
             files_for_lesion.append(mask)
-
-        # Create the None mask
-        union_mask = np.any(files_for_lesion, axis=0)
-        inverted_mask = 1 - union_mask
-
-        files_for_lesion.append(inverted_mask)
 
         return files_for_lesion

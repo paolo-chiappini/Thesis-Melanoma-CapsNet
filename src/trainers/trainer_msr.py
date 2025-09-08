@@ -29,7 +29,7 @@ class CapsNetTrainerMSR(BaseTrainer):
 
         global_reconstruction = self.model.decode(attribute_poses)
         loss_global_recon = global_recon_criterion(
-            global_reconstruction, images * lesion_masks, lesion_masks
+            global_reconstruction, images, lesion_masks
         )
 
         loss_msr = 0.0
@@ -49,9 +49,7 @@ class CapsNetTrainerMSR(BaseTrainer):
 
             masks_k = va_masks[:, k, :, :].unsqueeze(1)
 
-            loss_msr_k = local_recon_criterion(
-                local_reconstruction_k, images * masks_k, masks_k
-            )
+            loss_msr_k = local_recon_criterion(local_reconstruction_k, images, masks_k)
             loss_msr += loss_msr_k
         loss_msr_avg = loss_msr / K
 

@@ -31,7 +31,7 @@ class MaskedMSELoss(nn.Module):
         """
         mask = mask.expand_as(target).float()
 
-        squared_error = F.mse_loss(input, target, reduction="none")
+        squared_error = F.mse_loss(input, target * mask, reduction="none")
 
         lesion_error = squared_error * mask
         background_error = squared_error * (1 - mask)

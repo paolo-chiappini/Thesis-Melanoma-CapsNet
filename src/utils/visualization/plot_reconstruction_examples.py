@@ -33,7 +33,7 @@ def plot_reconstruction_examples(
     phase,
     save_dir="reconstructions",
     show=False,
-    max_capsules=7,
+    max_capsules=8,
     mean=None,
     std=None,
     va_mask_labels=None,
