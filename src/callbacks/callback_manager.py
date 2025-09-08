@@ -2,8 +2,9 @@ from .callback import Callback
 
 
 class CallbackManager:
-    def __init__(self, callbacks=None):
+    def __init__(self, callbacks=None, logger=None):
         self.callbacks = callbacks if callbacks is not None else []
+        self.logger = logger
         assert isinstance(
             self.callbacks, list
         ), "Callbacks must be a list of Callback instances"
@@ -11,6 +12,7 @@ class CallbackManager:
             assert isinstance(
                 callback, Callback
             ), "Callback must be an instance of Callback"
+            callback.set_logger(logger=self.logger)
 
     def add_callback(self, callback):
         assert isinstance(

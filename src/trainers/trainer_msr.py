@@ -42,7 +42,9 @@ class CapsNetTrainerMSR(BaseTrainer):
             pose_mask[:, k, :] = 1
 
             local_reconstruction_k = self.model.decode(attribute_poses, pose_mask)
-            if self.current_batch == len(self.loaders["val"]) - 1:
+            if self.current_phase == "val" and self.current_batch == len(
+                self.loaders["val"]
+            ):
                 local_reconstructions.append(local_reconstruction_k)
 
             masks_k = va_masks[:, k, :, :].unsqueeze(1)
@@ -55,7 +57,9 @@ class CapsNetTrainerMSR(BaseTrainer):
 
         total_recon_loss = alpha * loss_global_recon + beta * loss_msr_avg
 
-        if self.current_batch == len(self.loaders["val"]) - 1:
+        if self.current_phase == "val" and self.current_batch == len(
+            self.loaders["val"]
+        ):
             plot_reconstruction_examples(
                 images=images,
                 global_recons=global_reconstruction,
@@ -65,6 +69,7 @@ class CapsNetTrainerMSR(BaseTrainer):
                 epoch=self.current_epoch,
                 phase=self.current_phase,
                 va_mask_labels=self.loaders["val"].dataset.dataset.visual_attributes,
+                logger=self.logger,
             )
 
         total_loss.update({"msr_loss": total_recon_loss})

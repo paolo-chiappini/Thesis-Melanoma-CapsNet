@@ -28,9 +28,16 @@ class EarlyStoppingCallback(Callback):
             self.counter = 0
             self.best_epoch = epoch
             if self.restore_best_weights:
-                self.best_model_state = {
-                    k: v.cpu().clone() for k, v in logs["model"].state_dict().items()
-                }
+                if self.logger:
+                    print(f"Saving best model at epoch {epoch}")
+                    self.logger.save_model(
+                        model=logs["model"], filename="es_best_model.pth"
+                    )
+                else:
+                    self.best_model_state = {
+                        k: v.cpu().clone()
+                        for k, v in logs["model"].state_dict().items()
+                    }
         else:
             self.counter += 1
             if self.counter >= self.patience:

@@ -1,7 +1,9 @@
 import os
-import torch
-from .callback import Callback
+
 import matplotlib.pyplot as plt
+import torch
+
+from .callback import Callback
 
 
 class ReconstructionCallback(Callback):
@@ -54,8 +56,12 @@ class ReconstructionCallback(Callback):
             axes[1, i].axis("off")
 
         plt.suptitle(f"Epoch {epoch} - {phase.capitalize()} Reconstructions")
+
+        filename = os.path.join(self.save_dir, f"epoch_{epoch}")
         if self.show:
             plt.show()
+        elif self.logger:
+            self.logger.save_plot(plt.gcf(), name=filename)
         else:
-            plt.savefig(os.path.join(self.save_dir, f"epoch_{epoch}.png"))
-            plt.close()
+            plt.savefig(f"{filename}.png")
+        plt.close()

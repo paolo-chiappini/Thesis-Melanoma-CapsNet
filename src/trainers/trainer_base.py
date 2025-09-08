@@ -20,6 +20,8 @@ class BaseTrainer(ABC):
         save_name=None,
         metrics=None,  # dictionary of torchmetrics
     ):
+        self.logger = None
+
         self.model = model.to(device)
         self.loaders = loaders
         self.criterion = criterion
@@ -37,6 +39,15 @@ class BaseTrainer(ABC):
         self.current_phase = "train"
 
         os.makedirs(checkpoints_dir, exist_ok=True)
+
+    def set_logger(self, logger):
+        """
+        Set a training logger to save various artifacts during training.
+
+        Args:
+            logger (Logger): logger object.
+        """
+        self.logger = logger
 
     def set_weights(self, weights_dict):
         """
@@ -167,7 +178,7 @@ class BaseTrainer(ABC):
 
         progress = tqdm(loader, desc=f"Train Epoch {epoch}")
         for i, batch in enumerate(progress):
-            self.current_batch = i
+            self.current_batch = i + 1
 
             batch_data = self.prepare_batch(batch)
             self.optimizer.zero_grad()
@@ -234,8 +245,9 @@ class BaseTrainer(ABC):
         loader = self.loaders[split]
 
         with torch.no_grad():
-            for i, batch in enumerate(loader):
-                self.current_batch = i
+            progress = tqdm(loader, desc=f"Evaluation Epoch {epoch}")
+            for i, batch in enumerate(progress):
+                self.current_batch = i + 1
 
                 batch_data = self.prepare_batch(batch)
                 images = batch_data["images"]
@@ -244,6 +256,8 @@ class BaseTrainer(ABC):
                 losses = self.compute_loss(outputs, batch_data)
                 losses = losses if isinstance(losses, dict) else {"loss": losses}
                 running_loss += sum(losses.values()).item()
+
+                progress.set_postfix(loss=running_loss / (i + 1))
 
                 if callback_manager:
                     callback_manager.on_batch_end(
@@ -318,7 +332,10 @@ class BaseTrainer(ABC):
             if self.scheduler:
                 self.scheduler.step()
 
-        self.save_checkpoint(self.save_name)
+        if self.logger:
+            self.logger.save_model(self.model, self.save_name)
+        else:
+            self.save_checkpoint(self.save_name)
 
     def test(self, split="test"):
         """
@@ -358,4 +375,8 @@ class BaseTrainer(ABC):
         results.update(avg_metrics)
 
         print(f"Test Results on {split} split -> {results}")
+
+        if self.logger:
+            self.logger.save_metrics(metrics=results)
+
         return results

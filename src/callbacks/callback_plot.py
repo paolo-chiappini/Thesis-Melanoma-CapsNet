@@ -1,6 +1,8 @@
 import os
-from .callback import Callback
+
 import matplotlib.pyplot as plt
+
+from .callback import Callback
 
 
 class PlotCallback(Callback):
@@ -51,6 +53,8 @@ class PlotCallback(Callback):
 
         if self.show:
             plt.show()
+        elif self.logger:
+            self.logger.save_plot(plt.gcf(), name=self.filename.replace(".png", ""))
         else:
             plt.savefig(os.path.join(self.save_dir, self.filename))
-            plt.close()
+        plt.close()

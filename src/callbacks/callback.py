@@ -3,8 +3,11 @@ class Callback:
     Base class for all callbacks.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, logger=None):
+        self.logger = logger
+
+    def set_logger(self, logger):
+        self.logger = logger
 
     def on_epoch_end(self, epoch, logs=None):
         """
