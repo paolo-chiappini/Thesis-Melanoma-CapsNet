@@ -4,7 +4,6 @@ import torchvision.models as models
 
 from layers import ConvDecoder, MalignancyPredictor, PrimaryCapsules, RoutingCapsules
 from utils.commons import strip_module_prefix
-from utils.layer_output_shape import get_network_output_shape
 
 
 class ModelPretrainedCapsnet(nn.Module):
@@ -109,7 +108,7 @@ class ModelPretrainedCapsnet(nn.Module):
         full_model.load_state_dict(
             strip_module_prefix(checkpoint, prefix="module.encoder."),
         )
-        print(f"Successfully loaded weights")
+        print("Successfully loaded weights")
 
         # We take all layers except for the final adaptive average pooling and the fully connected layer.
         feature_extractor = nn.Sequential(*list(full_model.children())[:-2])

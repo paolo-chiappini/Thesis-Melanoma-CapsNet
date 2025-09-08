@@ -8,21 +8,6 @@ _CORRECT_THRESHOLD = 0.5
 
 
 class CapsNetTrainerVAs(BaseTrainer):
-    def compute_loss(self, outputs, batch_data):
-        attribute_logits, reconstructions, malignancy_scores, attribute_poses = outputs
-        return self.criterion(
-            attribute_logits,
-            attribute_poses,
-            batch_data["visual_attributes_targets"],
-            malignancy_scores,
-            torch.eye(len(malignancy_scores[0])).to(self.device)[
-                batch_data["malignancy_targets"]
-            ],  # one hot encoded labels
-            batch_data["images"],
-            reconstructions,
-            batch_data["lesion_masks"],
-        )
-
     def compute_custom_metrics(self, outputs, batch_data):
         outputs_dict = self.unpack_model_outputs(outputs)
 
@@ -53,13 +38,5 @@ class CapsNetTrainerVAs(BaseTrainer):
         }
 
     def unpack_model_outputs(self, outputs):
-        # va_scores, reconstructions, malignancy_scores, capsules = outputs
-        # return {
-        #     "preds": va_scores,
-        #     "reconstructions": reconstructions,
-        #     "malignancy": malignancy_scores,
-        #     "capsule_poses": capsules,
-        # }
-
         outputs.update({"logits": outputs["attribute_logits"]})
         return outputs

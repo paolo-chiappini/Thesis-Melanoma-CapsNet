@@ -1,3 +1,4 @@
+import torch.functional as F
 import torch.nn as nn
 
 from utils.commons import get_classes_from_module
@@ -50,7 +51,9 @@ class CombinedLoss(nn.Module):
             elif loss_name == "MalignancyLoss":
                 current_loss = loss_module(
                     malignancy_scores=model_outputs.get("malignancy_scores"),
-                    malignancy_targets=targets.get("malignancy_targets"),
+                    malignancy_targets=F.one_hot(
+                        targets.get("malignancy_targets").long(), num_classes=2
+                    ).float(),
                 )
             elif loss_name == "TotalCorrelationLoss":
                 current_loss = loss_module(

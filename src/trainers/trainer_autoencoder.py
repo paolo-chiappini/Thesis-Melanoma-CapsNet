@@ -7,9 +7,6 @@ from .trainer_base import BaseTrainer
 
 
 class AutoEncoderTrainer(BaseTrainer):
-    def compute_loss(self, outputs, batch_data):
-        return self.criterion(outputs, batch_data["images"])
-
     def compute_custom_metrics(self, outputs, batch_data):
         targets = batch_data["images"]
         _, preds = outputs

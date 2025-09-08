@@ -19,27 +19,12 @@ class CapsNetTrainerMSR(BaseTrainer):
         va_masks = batch_data["va_masks"]
         attribute_poses = outputs["attribute_poses"]
 
-        # total_loss = self.criterion(
-        #     outputs["attribute_logits"],
-        #     outputs["attribute_poses"],
-        #     batch_data["visual_attributes_targets"],
-        #     outputs["malignancy_scores"],
-        #     torch.eye(len(outputs["malignancy_scores"][0])).to(
-        #         self.device
-        #     )[  # TODO: move OHE
-        #         batch_data["malignancy_targets"]
-        #     ],  # one hot encoded labels
-        #     images,
-        #     outputs["reconstructions"],
-        #     masks,
-        # )
-
         total_loss = self.criterion(model_outputs=outputs, targets=batch_data)
 
-        alpha = 1.0
-        beta = 1.0
+        alpha = 5.0
+        beta = 5.0
 
-        global_recon_criterion = MaskedMSELoss(background_penalization=0.1)
+        global_recon_criterion = MaskedMSELoss(background_penalization=1.0)
         local_recon_criterion = MaskedMSELoss(background_penalization=0.1)
 
         global_reconstruction = self.model.decode(attribute_poses)
@@ -115,13 +100,5 @@ class CapsNetTrainerMSR(BaseTrainer):
         }
 
     def unpack_model_outputs(self, outputs):
-        # va_scores, reconstructions, malignancy_scores, capsules = outputs
-        # return {
-        #     "preds": va_scores,
-        #     "reconstructions": reconstructions,
-        #     "malignancy": malignancy_scores,
-        #     "capsule_poses": capsules,
-        # }
-
         outputs.update({"logits": outputs["attribute_logits"]})
         return outputs

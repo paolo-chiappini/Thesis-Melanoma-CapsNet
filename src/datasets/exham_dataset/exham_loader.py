@@ -67,7 +67,6 @@ class EXHAMDataset(BaseDataset):
             "GP",
             "MS",
             # "MVP",
-            # "None",
             # "OPC",
             # "PDES",
             # "PES",
@@ -80,6 +79,7 @@ class EXHAMDataset(BaseDataset):
             # "SPC",
             "TRBL",
             "WLSA",
+            "None",  # Used to capture other background information.
         ]
         self.labels = self.data[self.label]
 
@@ -183,4 +183,11 @@ class EXHAMDataset(BaseDataset):
                 mask = Image.new("L", img_size, 0)  # create blank mask
 
             files_for_lesion.append(mask)
+
+        # Create the None mask
+        union_mask = np.any(files_for_lesion, axis=0)
+        inverted_mask = 1 - union_mask
+
+        files_for_lesion.append(inverted_mask)
+
         return files_for_lesion

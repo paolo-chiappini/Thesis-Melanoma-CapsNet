@@ -50,8 +50,7 @@ class TransferTrainer(BaseTrainer):
         return super().prepare_batch(self, batch=batch)
 
     def compute_loss(self, outputs, batch_data):
-        logits = outputs
-        labels = batch_data["labels"]
+        labels = batch_data["malignancy_targets"]
 
         if labels.ndim > 1 and labels.shape[1] == 1:
             labels = labels.squeeze(1)
@@ -60,7 +59,9 @@ class TransferTrainer(BaseTrainer):
                 f"Labels tensor has incorrect shape {labels.shape}. Expected (batch_size,)."
             )
 
-        return self.criterion(logits, labels.long())
+        batch_data["malignancy_targets"] = labels
+
+        return self.criterion(model_outputs=outputs, targets=batch_data)
 
     def unpack_model_outputs(self, outputs):
         return {"logits": outputs["encodings"]}

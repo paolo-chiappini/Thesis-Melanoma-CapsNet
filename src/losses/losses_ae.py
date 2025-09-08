@@ -1,16 +1,16 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_msssim import ssim
-from torchvision.models import vgg16
+from torchvision.models import VGG16_Weights, vgg16
 
 
+# TODO: review this loss. Check correctness of new torchvision weights. Also resize_size is a little weird.
 class PerceptualLoss(nn.Module):
     def __init__(
         self,
         resize=True,
         resize_size=(224, 244),
-        model=vgg16(pretrained=True).features[:16],
+        model=vgg16(weights=VGG16_Weights.IMAGENET1K_V1).features[:16],
     ):
         super(PerceptualLoss, self).__init__()
         self.model = model.eval()
@@ -18,8 +18,10 @@ class PerceptualLoss(nn.Module):
             param.requires_grad = False
         self.resize = resize
         self.resize_size = resize_size
+        self.vgg_preprocess = VGG16_Weights.transforms
 
     def forward(self, input, target):
+        input = self.vgg_preprocess(input)
         if self.resize:
             input = F.interpolate(
                 input, size=self.resize_size, mode="bilinear", align_corners=False
