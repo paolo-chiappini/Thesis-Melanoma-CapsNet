@@ -3,9 +3,9 @@ dataset:
     root: ./data/EXHAMDataset
     metadata_path: null
     image_extension: null
-    batch_size: 10
-    val_size: 0.09
-    test_size: 0.9
+    batch_size: 32
+    val_size: 0.1
+    test_size: 0.1
 
 preprocess:
     img_size: 256
@@ -22,11 +22,14 @@ model:
 trainer:
     name: CapsNetTrainerMSR
     epochs: 70
-    learning_rate: 0.001
+    learning_rate: 0.0001
     lr_decay: 0.96
     loss:
         components:
             AttributeLoss:
+                lambda: 1.0
+                params: {}
+            MalignancyLoss:
                 lambda: 1.0
                 params: {}
 
@@ -34,11 +37,8 @@ callbacks:
     - name: PlotCallback
     - name: ReconstructionCallback
       frequency: 7
-    # - name: CurrentEpochExampleCallback # To implement
-    #   frequency: 1
-    #   track: train
     - name: EarlyStoppingCallback
-      patience: 10
+      patience: 20
       min_delta: 0.03
       restore_best_weights: True
 
@@ -53,7 +53,7 @@ metrics:
 system:
     seed: 123
     augment: True
-    save_name: experiment_msr
+    save_name: experiment_msr_MLP_exp3
     save_path: ./checkpoints/
 
 perturbation:

@@ -22,10 +22,10 @@ class CapsNetTrainerMSR(BaseTrainer):
         total_loss = self.criterion(model_outputs=outputs, targets=batch_data)
 
         alpha = 5.0
-        beta = 5.0
+        beta = 10.0
 
         global_recon_criterion = MaskedMSELoss(background_penalization=1.0)
-        local_recon_criterion = MaskedMSELoss(background_penalization=0.1)
+        local_recon_criterion = MaskedMSELoss(background_penalization=1.0)
 
         global_reconstruction = self.model.decode(attribute_poses)
         loss_global_recon = global_recon_criterion(
