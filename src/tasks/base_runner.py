@@ -65,8 +65,7 @@ class BaseRunner:
         if load_weights:
             self.model = load_model(
                 model_structure=self.model,
-                model_name=self.config["system"]["save_name"],
-                checkpoints_dir=self.config["system"]["save_path"],
+                model_path=self.model_path,
                 device=self.device,
             )
         elif self.multi_gpu:  # assumes that for training load_weights = False

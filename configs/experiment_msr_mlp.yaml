@@ -11,7 +11,9 @@ preprocess:
     img_size: 256
 
 model:
+    # name: CapsNetWithAttributesMLP_Pre
     name: CapsNetWithAttributesMLP
+    # pretrained_encoder_path: ./checkpoints/resnet34_baseline.pth.tar
     channels: 3
     primary_dim: 8
     pose_dim: 16
@@ -31,6 +33,9 @@ trainer:
                 params: {}
             MalignancyLoss:
                 lambda: 1.0
+                params: {}
+            TotalCorrelationLoss:
+                lambda: 0.01
                 params: {}
 
 callbacks:

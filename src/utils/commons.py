@@ -1,12 +1,8 @@
-import os
 from collections import OrderedDict
 
-import albumentations as A
 import numpy as np
 import torch
-import torch.nn as nn
-from albumentations.pytorch import ToTensorV2
-from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.model_selection import StratifiedGroupKFold, StratifiedShuffleSplit
 from torch.utils.data import DataLoader, Subset
 
 from datasets.augmentations import get_transforms
@@ -30,13 +26,12 @@ def get_classes_from_module(module_startswith, parent_class):
 
 def load_model(
     model_structure,
-    model_name,
-    checkpoints_dir="checkpoints",
+    model_path,
     device="cpu",
 ):
     state_dict = torch.load(
-        os.path.join(checkpoints_dir, model_name + ".pth.tar"),
-        weights_only=False,
+        model_path,
+        weights_only=True,
         map_location=torch.device(device),
     )
 
@@ -95,8 +90,6 @@ def compute_class_weights(class_counts, device):
 
 
 def stratified_split(labels, groups=None, val_size=0.1, test_size=0.1, seed=123):
-    from sklearn.model_selection import StratifiedShuffleSplit
-
     indices = np.arange(len(labels))
     labels = np.array(labels)
 

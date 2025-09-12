@@ -1,11 +1,14 @@
+import gc
 import hashlib
 import json
 import os
 import shutil
 from datetime import datetime
 
+import matplotlib.figure
 import torch
 import yaml
+from torchvision.utils import save_image
 
 
 def generate_experiment_name(config: dict, max_len: int = 100):
@@ -64,8 +67,6 @@ class TrainingLogger:
             yaml.dump(config, f)
 
     def save_model(self, model, filename="model_final.pth"):
-        import gc
-
         gc.collect()
         torch.cuda.empty_cache()
 
@@ -90,10 +91,6 @@ class TrainingLogger:
         print(f"Plot saved to {path}")
 
     def save_image(self, image, name: str):
-        import matplotlib.figure
-        import torch
-        from torchvision.utils import save_image
-
         path = os.path.join(self.images_dir, f"{name}.png")
 
         if isinstance(image, torch.Tensor):

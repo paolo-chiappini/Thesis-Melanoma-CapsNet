@@ -12,6 +12,7 @@ from .model_pretrained import ModelPretrainedCapsnet
 from .model_sanity_check import SanityCheckModel
 from .model_transfer import TransferModel
 from .variants.model_capsnet_attr_mlp import CapsNetWithAttributesMLP
+from .variants.model_capsnet_attr_mlp_pre import CapsNetWithAttributesMLP_Pre
 
 
 def get_model(config, data_loader, device):

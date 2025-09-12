@@ -78,6 +78,74 @@ def compute_mig_score(
     return {"mig_score": mig_score, "mi_matrix": mi_matrix, "entropies": entropies}
 
 
+def compute_greedy_mig_score(
+    latent_poses: np.ndarray, true_labels: np.ndarray, n_bins: int = 10
+):
+    """
+    Calculates the Greedy Mutual Information Gap (Greedy MIG) score.
+
+    Args:
+        latent_poses (ndarray): Capsule poses, shape (num_samples, num_capsules, pose_dim).
+        true_labels (ndarray): Ground truth visual attributes, shape (num_samples, num_attributes).
+        n_bins (int): Number of bins for MI estimation.
+
+    Returns:
+        dict: {
+            "greedy_mig_score": float,
+            "permuted_mi_matrix": ndarray,
+            "original_mi_matrix": ndarray,
+            "mapping": List[int],  # permutation of capsules
+            "entropies": ndarray
+        }
+    """
+    num_samples, num_capsules, pose_dim = latent_poses.shape
+    _, num_attributes = true_labels.shape
+
+    mi_matrix = np.zeros((num_capsules, num_attributes))
+    for k in range(num_capsules):
+        pose_k = latent_poses[:, k, :]
+        for j in range(num_attributes):
+            target_j = true_labels[:, j]
+            mi_matrix[k, j] = robust_mi_estimate(pose_k, target_j, n_bins=n_bins)
+
+    assigned_capsules = set()
+    mapping = [-1] * num_attributes  # mapping[j] = capsule index assigned to VA j
+
+    for j in range(num_attributes):
+        sorted_caps = np.argsort(mi_matrix[:, j])[::-1]  # descending MI
+        for k in sorted_caps:
+            if k not in assigned_capsules:
+                mapping[j] = k
+                assigned_capsules.add(k)
+                break
+
+    permuted_mi_matrix = np.zeros((num_attributes, num_attributes))
+    for j, k in enumerate(mapping):
+        permuted_mi_matrix[j, :] = mi_matrix[k, :]
+
+    entropies = np.zeros(num_attributes)
+    for j in range(num_attributes):
+        p = np.mean(true_labels[:, j])
+        if p == 0 or p == 1:
+            entropies[j] = 0
+        else:
+            entropies[j] = -p * np.log2(p) - (1 - p) * np.log2(1 - p)
+    entropies += 1e-8  # avoid div by zero
+
+    sorted_mi = np.sort(permuted_mi_matrix, axis=1)[:, ::-1]  # sort descending
+    gaps = sorted_mi[:, 0] - sorted_mi[:, 1]
+    normalized_gaps = gaps / entropies
+    greedy_mig_score = np.mean(normalized_gaps)
+
+    return {
+        "mig_score": greedy_mig_score,
+        "mi_matrix": permuted_mi_matrix,
+        "original_mi_matrix": mi_matrix,
+        "mapping": mapping,
+        "entropies": entropies,
+    }
+
+
 def plot_mig_heatmap(results, filename="/figures/mig.pdf"):
     fig, axes = plt.subplots(1, 1, figsize=(8, 6))
 
