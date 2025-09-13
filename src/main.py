@@ -1,11 +1,13 @@
 import argparse
-import yaml
-import torch
 import random
-import numpy as np
-from tasks import get_task, tasks
 import time
 from datetime import timedelta
+
+import numpy as np
+import torch
+import yaml
+
+from tasks import get_task, tasks
 
 
 def set_seed(seed):
@@ -31,6 +33,12 @@ def main():
         "--model_path", help="Path to model weights (for visualization)"
     )
     parser.add_argument("--cpu", action="store_true")
+    parser.add_argument(
+        "--no_save",
+        help="If present, doesn't save the current model, used for testing.",
+        default=False,
+        action="store_true",
+    )
     args = parser.parse_args()
 
     with open(args.config, "r") as f:
@@ -41,7 +49,12 @@ def main():
     print(">" * 5 + f" Running task: [{args.task}]")
 
     task_cls = get_task(args.task)
-    task = task_cls(config, model_path=args.model_path, cpu_override=args.cpu)
+    task = task_cls(
+        config=config,
+        model_path=args.model_path,
+        cpu_override=args.cpu,
+        no_save=args.no_save,
+    )
 
     task.run()
 

@@ -22,10 +22,10 @@ class CapsNetTrainerMSR(BaseTrainer):
         total_loss = self.criterion(model_outputs=outputs, targets=batch_data)
 
         alpha = 5.0
-        beta = 10.0
+        beta = 5.0
 
         global_recon_criterion = MaskedMSELoss(background_penalization=1.0)
-        local_recon_criterion = MaskedMSELoss(background_penalization=1.0)
+        local_recon_criterion = MaskedMSELoss(background_penalization=0.1)
 
         global_reconstruction = self.model.decode(attribute_poses)
         loss_global_recon = global_recon_criterion(
@@ -58,6 +58,7 @@ class CapsNetTrainerMSR(BaseTrainer):
         if self.current_phase == "val" and self.current_batch == len(
             self.loaders["val"]
         ):
+            visual_attrs = self.loaders["val"].dataset.dataset.visual_attributes
             plot_reconstruction_examples(
                 images=images,
                 global_recons=global_reconstruction,
@@ -66,8 +67,10 @@ class CapsNetTrainerMSR(BaseTrainer):
                 va_masks=va_masks,
                 epoch=self.current_epoch,
                 phase=self.current_phase,
-                va_mask_labels=self.loaders["val"].dataset.dataset.visual_attributes,
+                va_mask_labels=visual_attrs,
                 logger=self.logger,
+                show=True,
+                max_capsules=len(visual_attrs),
             )
 
         total_loss.update({"msr_loss": total_recon_loss})

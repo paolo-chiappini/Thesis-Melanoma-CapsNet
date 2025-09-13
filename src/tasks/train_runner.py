@@ -7,6 +7,10 @@ from .base_runner import BaseRunner
 
 
 class TrainRunner(BaseRunner):
+    def __init__(self, config, model_path=None, cpu_override=False, **kwargs):
+        super().__init__(config, model_path, cpu_override, **kwargs)
+        self.no_save = kwargs.get("no_save")
+
     def prepare(self):
         self.prepare_dataset(is_train=True)
         self.compute_weights()
@@ -32,7 +36,7 @@ class TrainRunner(BaseRunner):
         if self.config["system"].get("use_weighted_metrics", False):
             trainer.set_weights(weights_dict=self.weights)
 
-        logger = TrainingLogger(config=self.config)
+        logger = None if self.no_save else TrainingLogger(config=self.config)
 
         callbacks = get_callbacks(callback_config=self.config.get("callbacks", []))
         callback_manager = CallbackManager(callbacks=callbacks, logger=logger)

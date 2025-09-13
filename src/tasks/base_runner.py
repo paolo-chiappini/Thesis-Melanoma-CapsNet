@@ -15,7 +15,7 @@ from utils.commons import (
 
 
 class BaseRunner:
-    def __init__(self, config, model_path=None, cpu_override=False):
+    def __init__(self, config, model_path=None, cpu_override=False, **kwargs):
         self.config = config
         self.model_path = model_path
         self.cpu_override = cpu_override
@@ -63,6 +63,7 @@ class BaseRunner:
             config=self.config["model"], data_loader=self.loaders, device=self.device
         )
         if load_weights:
+            print(f"Loading weights for model {self.model_path}")
             self.model = load_model(
                 model_structure=self.model,
                 model_path=self.model_path,

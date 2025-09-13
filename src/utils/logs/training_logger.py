@@ -43,7 +43,7 @@ class TrainingLogger:
 
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.experiment_dir = os.path.join(
-            self.save_path, f"{self.experiment_name}_{timestamp}"
+            self.save_path, f"{timestamp}_{self.experiment_name}"
         )
         os.makedirs(self.experiment_dir, exist_ok=True)
 
