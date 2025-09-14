@@ -6,6 +6,7 @@ from utils.commons import get_classes_from_module
 from .trainer_autoencoder import AutoEncoderTrainer
 from .trainer_base import BaseTrainer
 from .trainer_capsnet_vas import CapsNetTrainerVAs
+from .trainer_hungarian import CapsNetTrainerHungarian
 from .trainer_msr import CapsNetTrainerMSR
 from .trainer_sanity_check import SanityCheckTrainer
 from .trainer_transfer import TransferTrainer
@@ -54,6 +55,8 @@ def get_trainer(
     except:
         num_attributes = 0
 
+    other_params = trainer_config.get("other_params", {})
+
     return trainer_class(
         model,
         data_loader,
@@ -72,4 +75,5 @@ def get_trainer(
             if metrics_config is not None
             else {}
         ),
+        **other_params,
     )

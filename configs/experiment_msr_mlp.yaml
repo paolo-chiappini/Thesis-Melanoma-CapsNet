@@ -11,9 +11,9 @@ preprocess:
     img_size: 256
 
 model:
-    name: CapsNetWithAttributesMLP_Pre
-    # name: CapsNetWithAttributesMLP
-    pretrained_encoder_path: ./checkpoints/resnet34_baseline.pth.tar
+    # name: CapsNetWithAttributesMLP_Pre
+    name: CapsNetWithAttributesMLP
+    # pretrained_encoder_path: ./checkpoints/resnet34_baseline.pth.tar
     channels: 3
     primary_dim: 8
     pose_dim: 16
@@ -34,9 +34,9 @@ trainer:
             MalignancyLoss:
                 lambda: 1.0
                 params: {}
-            TotalCorrelationLoss:
-            #     lambda: 0.01
-            #     params: {}
+            # TotalCorrelationLoss:
+            # lambda: 0.05
+            # params: {}
 
 callbacks:
     - name: PlotCallback
@@ -58,7 +58,7 @@ metrics:
 system:
     seed: 123
     augment: True
-    save_name: experiment_msr_MLP_exp3
+    save_name: experiment_yesTCLoss
     save_path: ./checkpoints/
 
 perturbation:

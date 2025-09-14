@@ -19,6 +19,7 @@ class BaseTrainer(ABC):
         checkpoints_dir="checkpoints",
         save_name=None,
         metrics=None,  # dictionary of torchmetrics
+        **kwargs,
     ):
         self.logger = None
 
