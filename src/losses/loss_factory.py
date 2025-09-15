@@ -5,6 +5,7 @@ from utils.commons import get_classes_from_module
 
 from .losses import *
 from .losses_ae import *
+from .mpl_loss import *
 from .msr_loss import *
 from .tc_loss import *
 
@@ -58,6 +59,16 @@ class CombinedLoss(nn.Module):
             elif loss_name == "TotalCorrelationLoss":
                 current_loss = loss_module(
                     z_activations=model_outputs.get("attribute_poses")
+                )
+            elif loss_name == "MSRPerceptualLoss":
+                current_loss = loss_module(
+                    image=targets["images"],
+                    global_reconstruction=model_outputs["reconstructions"],
+                    attribute_reconstructions=model_outputs[
+                        "attribute_reconstructions"
+                    ],
+                    lesion_mask=targets["lesion_masks"],
+                    attribute_masks=targets["va_masks"],
                 )
             else:
                 raise NotImplementedError(

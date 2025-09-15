@@ -1,0 +1,71 @@
+dataset:
+    name: EXHAMDataset
+    root: ./data/EXHAMDataset
+    metadata_path: null
+    image_extension: null
+    batch_size: 32
+    val_size: 0.1
+    test_size: 0.1
+
+preprocess:
+    img_size: 256
+
+model:
+    name: CapsNetWithAttributesMLP
+    channels: 3
+    primary_dim: 8
+    pose_dim: 16
+    num_classes: 2
+    routing_steps: 3
+    routing_algorithm: sigmoid
+
+trainer:
+    name: CapsNetTrainerMPL
+    epochs: 200
+    learning_rate: 0.0001
+    lr_decay: 0.96
+    loss:
+        components:
+            AttributeLoss:
+                lambda: 1.0
+                params: {}
+            MalignancyLoss:
+                lambda: 1.0
+                params: {}
+            MSRPerceptualLoss:
+                lambda: 1.0
+                params:
+                    alpha: 1.0
+                    beta: 1.0
+                    lambda_bg_global: 1.0
+                    lambda_bg_local: 0.1
+
+callbacks:
+    - name: PlotCallback
+    - name: ReconstructionCallback
+      frequency: 7
+    - name: EarlyStoppingCallback
+      patience: 20
+      min_delta: 0.03
+      restore_best_weights: True
+
+metrics:
+    - type: f1
+      per_attribute: True
+    - type: precision
+      per_attribute: True
+    - type: recall
+      per_attribute: True
+
+system:
+    seed: 123
+    augment: True
+    save_name: experiment_yesTCLoss
+    save_path: ./checkpoints/
+
+perturbation:
+    num_samples: 2
+    is_global: True
+
+evaluate:
+    split_size: 0.2

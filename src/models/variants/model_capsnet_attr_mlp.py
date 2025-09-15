@@ -164,17 +164,28 @@ class CapsNetWithAttributesMLP(nn.Module):
         # 4. reconstuct images from poses
         reconstructions = self.decode(attribute_poses, y_mask)
 
+        # 5. reconstruct single-attribute images (with vectorization)
         N, K, pose_dim = attribute_poses.shape
+
+        eye = torch.eye(K, device=self.device).view(1, K, K, 1)
+        masked_poses = attribute_poses.unsqueeze(1) * eye
+        masked_poses_flat = masked_poses.view(N * K, K, pose_dim)
+
+        attribute_reconstructions_flat = self.decode(masked_poses_flat)
+        attribute_reconstructions = attribute_reconstructions_flat.view(
+            N, K, *reconstructions.shape[1:]
+        )
+
         # reshape for efficiency
         reshaped_poses = attribute_poses.reshape(N * K, pose_dim)
 
         logits_flat = self.attributes_classifier(reshaped_poses)
         attribute_logits = logits_flat.view(N, K)
 
-        # return attribute_logits, reconstructions, malignancy_scores, attribute_poses
         return {
             "attribute_logits": attribute_logits,
             "reconstructions": reconstructions,
+            "attribute_reconstructions": attribute_reconstructions,
             "malignancy_scores": malignancy_scores,
             "attribute_poses": attribute_poses,
         }
