@@ -5,9 +5,16 @@ import torch.nn.functional as F
 from scipy.optimize import linear_sum_assignment
 from torch import nn
 
+from losses.msr_loss import MaskedMSELoss
+
 
 class HungarianMatcher(nn.Module):
-    def __init__(self, lambda_cls: float = 1, lambda_recon: float = 1):
+    def __init__(
+        self,
+        lambda_cls: float = 1,
+        lambda_recon: float = 1,
+        recon_criterion: nn.Module = None,
+    ):
         super().__init__()
         self.lambda_cls = lambda_cls
         self.lambda_recon = lambda_recon
@@ -16,6 +23,14 @@ class HungarianMatcher(nn.Module):
             raise ValueError(
                 "At least one of lambda_cls or lambda_recon must be positive."
             )
+
+        if recon_criterion is None:
+            print(
+                "No recon_criterion provided to HungarianMatcher. Defaulting to MMSE."
+            )
+            self.recon_criterion = MaskedMSELoss(background_penalization=0.1)
+        else:
+            self.recon_criterion = recon_criterion
 
     @torch.no_grad()
     def forward(self, outputs: dict, targets: dict, decoder: Callable):
@@ -38,6 +53,7 @@ class HungarianMatcher(nn.Module):
                 - index_j is the indices of the corresponding selected targets (in order)
         """
         batch_size, num_capsules = outputs["attribute_logits"].shape
+        _, _, pose_dim = outputs["attribute_poses"].shape
         device = outputs["attribute_logits"].device
 
         # (N_batch, K_attr)
@@ -65,30 +81,29 @@ class HungarianMatcher(nn.Module):
         images = targets["images"]  # (N_batch, K_attr, C, H, W)
         masks = targets["va_masks"]  # (N_batch, K_attr, H, W)
 
-        # (N_batch, K_preds, C, H, W)
-        reconstructions = []
-        for k in range(num_capsules):
-            pose_mask = torch.zeros_like(poses, device=device)
-            pose_mask[:, k, :] = 1
-            reconstructions.append(decoder(poses, pose_mask))
+        eye = torch.eye(num_attributes, device=device).view(
+            1, num_attributes, num_attributes, 1
+        )
+        masked_poses_batch = poses.unsqueeze(1) * eye
 
-        # (N_batch, K_preds, C,  H,  W)
-        recons_expanded = torch.stack(reconstructions, dim=1)
-        # (N_batch, 1,       C,  H,  W)
-        images_expanded = images.unsqueeze(1)
-        # (N_batch, 1,       K_attr,    1,  C,  H,  W)
-        masks_expanded = masks.unsqueeze(2).unsqueeze(1)
+        # (N_batch * K_attr, C, H, W)
+        masked_poses_flat = masked_poses_batch.view(
+            batch_size * num_attributes, num_attributes, pose_dim
+        )
 
-        # (N_batch, K_preds, C, H, W) -> (N_batch, K_preds, 1, C, H, W)
-        error_sq = ((recons_expanded - images_expanded) ** 2).unsqueeze(2)
-        # (N_batch, K_preds, K_attr, C, H, W)
-        masked_error = error_sq * masks_expanded
+        recons_flat = decoder(masked_poses_flat)
+        recons = recons_flat.view(batch_size, num_attributes, *recons_flat.shape[1:])
 
-        sum_masked_error = masked_error.sum(dim=(-3, -2, -1))
+        cost_recon = torch.zeros(
+            batch_size, num_attributes, num_attributes, device=device
+        )
 
-        mask_area = masks.sum(dim=(-2, -1)).clamp(min=1e-6)  # avoid zero division
-
-        cost_recon = sum_masked_error / mask_area.squeeze(-1).unsqueeze(1)
+        for j in range(num_attributes):
+            target_mask_j = masks[:, j, :, :].unsqueeze(1)
+            for i in range(num_attributes):
+                recons_i = recons[:, i, :, :, :]
+                loss_ij = self.recon_criterion(recons_i, images, target_mask_j)
+                cost_recon[:, i, j] = loss_ij
 
         is_present = (
             (attribute_targets > 0.5).float().unsqueeze(1)

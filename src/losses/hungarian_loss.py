@@ -115,8 +115,7 @@ class HungarianLoss(nn.Module):
 
             loss_msr += self.recon_criterion(reconstruction, image_target, mask_target)
 
-        num_capsules = outputs["attribute_logits"].shape[1]
-        loss = loss_msr / num_capsules
+        loss = loss_msr / num_present_matches
 
         return loss
 
@@ -132,8 +131,10 @@ class HungarianLoss(nn.Module):
 
         total_loss = self.lambda_cls * loss_cls + self.lambda_recon * loss_recon
 
+        print(
+            f"DEBUG: cls: {self.lambda_cls * loss_cls}; recon {self.lambda_recon * loss_recon}"
+        )
+
         return {
             "loss_total": total_loss,
-            "loss_cls": loss_cls,
-            "loss_recon": loss_recon,
         }
