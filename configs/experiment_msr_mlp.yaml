@@ -23,7 +23,7 @@ model:
 
 trainer:
     name: CapsNetTrainerMSR
-    epochs: 70
+    epochs: 200
     learning_rate: 0.0001
     lr_decay: 0.96
     loss:

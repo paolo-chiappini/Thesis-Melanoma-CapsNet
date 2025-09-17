@@ -33,6 +33,7 @@ class BaseRunner:
     def setup_device(self):
         device, multi_gpu = get_device(cpu_override=self.cpu_override)
         batch_size = self.config["dataset"]["batch_size"]
+
         if device.type == "cuda" and multi_gpu:
             batch_size *= torch.cuda.device_count()
         num_workers = 0 if not multi_gpu else 2

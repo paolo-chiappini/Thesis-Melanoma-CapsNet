@@ -27,7 +27,7 @@ class CapsNetTrainerMPL(BaseTrainer):
             plot_reconstruction_examples(
                 images=images,
                 global_recons=global_reconstructions,
-                capsule_recons=torch.stack(local_reconstructions, dim=1),
+                capsule_recons=local_reconstructions,
                 lesion_masks=lesion_masks,
                 va_masks=va_masks,
                 epoch=self.current_epoch,

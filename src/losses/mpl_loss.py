@@ -65,10 +65,10 @@ class MaskedPerceptualLossVGG16(nn.Module):
         self.feature_extractor.eval()
 
         input_preprocessed = self.preprocess(input)
-        target_preprocessed = self.preprocess(target)
+        target_preprocessed = self.preprocess(target * mask)
 
+        input_features = self.feature_extractor(input_preprocessed)
         with torch.no_grad():
-            input_features = self.feature_extractor(input_preprocessed)
             target_features = self.feature_extractor(target_preprocessed)
 
         total_loss = 0.0
@@ -81,32 +81,45 @@ class MaskedPerceptualLossVGG16(nn.Module):
                 mask, size=in_feature.shape[-2:], mode="bilinear", align_corners=False
             )
 
-            masked_input_feature = in_feature * resized_mask
-            masked_target_feature = tgt_feature * resized_mask
+            mask_sum = resized_mask.sum()
 
-            foreground_loss = self.mse_loss(masked_input_feature, masked_target_feature)
+            if mask_sum > 1e-5:
+                masked_input_feature = in_feature * resized_mask
+                masked_target_feature = tgt_feature * resized_mask
 
-            mask_sum = resized_mask.sum() * in_feature.shape[1] + 1e-8
-            normalized_foreground_loss = foreground_loss / mask_sum
+                foreground_loss = self.mse_loss(
+                    masked_input_feature, masked_target_feature
+                )
 
-            total_loss += normalized_foreground_loss
+                mask_sum = mask_sum * in_feature.shape[1] + 1e-8
+                normalized_foreground_loss = foreground_loss / mask_sum
+
+                total_loss += normalized_foreground_loss
 
             if self.background_penalization > 0:
                 inverted_mask = 1 - resized_mask
+                inverted_mask_sum = inverted_mask.sum()
 
-                background_input_feature = in_feature * inverted_mask
-                background_target_feature = tgt_feature * inverted_mask
+                if inverted_mask_sum > 1e-5:
+                    background_input_feature = in_feature * inverted_mask
+                    background_target_feature = tgt_feature * inverted_mask
 
-                background_loss = self.mse_loss(
-                    background_input_feature, background_target_feature
-                )
+                    background_loss = self.mse_loss(
+                        background_input_feature, background_target_feature
+                    )
 
-                inverted_mask_sum = inverted_mask.sum() * in_feature.shape[1] + 1e-8
-                normalized_background_loss = background_loss / inverted_mask_sum
+                    inverted_mask_sum = inverted_mask_sum * in_feature.shape[1] + 1e-8
+                    normalized_background_loss = background_loss / inverted_mask_sum
 
-                total_loss += self.background_penalization * normalized_background_loss
+                    total_loss += (
+                        self.background_penalization * normalized_background_loss
+                    )
 
-        return total_loss / len(input_features)
+        return (
+            total_loss / len(input_features)
+            if len(input_features) > 0
+            else torch.tensor(0.0)
+        )
 
 
 class MSRPerceptualLoss(nn.Module):

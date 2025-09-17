@@ -1,4 +1,5 @@
 import argparse
+import os
 import random
 import time
 from datetime import timedelta
@@ -20,6 +21,8 @@ def set_seed(seed):
 
 
 def main():
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
     start_time = time.time()
 
     parser = argparse.ArgumentParser()

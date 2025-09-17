@@ -3,7 +3,7 @@ dataset:
     root: ./data/EXHAMDataset
     metadata_path: null
     image_extension: null
-    batch_size: 32
+    batch_size: 16
     val_size: 0.1
     test_size: 0.1
 
