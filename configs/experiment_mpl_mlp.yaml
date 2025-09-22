@@ -43,7 +43,7 @@ trainer:
 callbacks:
     - name: PlotCallback
     - name: ReconstructionCallback
-      frequency: 7
+      frequency: 5
     - name: EarlyStoppingCallback
       patience: 20
       min_delta: 0.03

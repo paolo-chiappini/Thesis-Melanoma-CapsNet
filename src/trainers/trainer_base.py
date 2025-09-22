@@ -298,10 +298,16 @@ class BaseTrainer(ABC):
             self.early_stop = self.early_stop or logs.get("stop", False)
 
             if "reconstructions" in outputs_dict:
-                masks = batch_data["lesion_masks"]
+                batch_data = next(iter(progress))
+                images = batch_data["images"][:8]
+                masks = batch_data["lesion_masks"][:8]
+
+                outputs_dict = self.model(images.to(self.device))
+                reconstructions = outputs_dict["reconstructions"][:8]
+
                 callback_manager.on_reconstruction(
-                    images[:8] * masks[:8],
-                    outputs_dict["reconstructions"][:8],
+                    images * masks,
+                    reconstructions,
                     epoch,
                     split,
                 )
