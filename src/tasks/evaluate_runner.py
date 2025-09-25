@@ -23,7 +23,7 @@ class EvaluateRunner(BaseRunner):
 
         self.build_model(load_weights=True)
         self.loss_criterion = create_combined_loss(
-            config=self.config["trainer"]["loss"]
+            config=self.config, device=self.device
         )
 
     def execute(self):
@@ -104,6 +104,9 @@ class EvaluateRunner(BaseRunner):
 
         combined_roc_fig.savefig(roc_save_path, dpi=300, bbox_inches="tight")
         combined_pr_fig.savefig(pr_save_path, dpi=300, bbox_inches="tight")
+
+        print(f"Saved ROC at {roc_save_path}")
+        print(f"Saved PRC at {pr_save_path}")
 
         print(f"AUC Scores: {auc_scores}")
         # TODO: continue here

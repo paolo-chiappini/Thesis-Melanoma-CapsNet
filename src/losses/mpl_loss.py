@@ -61,70 +61,111 @@ class MaskedPerceptualLossVGG16(nn.Module):
         Returns:
             torch.Tensor: Calculated scalar MPL.
         """
+        # self.feature_extractor = self.feature_extractor.to(input.device)
+        # self.feature_extractor.eval()
+
+        # input_preprocessed = self.preprocess(input)
+        # target_preprocessed = self.preprocess(target * mask)
+
+        # input_features = self.feature_extractor(input_preprocessed)
+        # with torch.no_grad():
+        #     target_features = self.feature_extractor(target_preprocessed)
+
+        # total_loss = 0.0
+
+        # for i in range(len(input_features)):
+        #     in_feature = input_features[i]
+        #     tgt_feature = target_features[i]
+
+        #     resized_mask = F.interpolate(
+        #         mask, size=in_feature.shape[-2:], mode="bilinear", align_corners=False
+        #     )
+
+        #     mask_sum = resized_mask.sum()
+
+        #     if mask_sum > 1e-5:
+        #         masked_input_feature = in_feature * resized_mask
+        #         masked_target_feature = tgt_feature * resized_mask
+
+        #         foreground_loss = self.mse_loss(
+        #             masked_input_feature, masked_target_feature
+        #         )
+
+        #         mask_sum = mask_sum * in_feature.shape[1] + 1e-8
+        #         normalized_foreground_loss = foreground_loss / mask_sum
+
+        #         total_loss += normalized_foreground_loss
+
+        #     if self.background_penalization > 0:
+        #         inverted_mask = 1 - resized_mask
+        #         inverted_mask_sum = inverted_mask.sum()
+
+        #         if inverted_mask_sum > 1e-5:
+        #             background_input_feature = in_feature * inverted_mask
+        #             background_target_feature = tgt_feature * inverted_mask
+
+        #             background_loss = self.mse_loss(
+        #                 background_input_feature, background_target_feature
+        #             )
+
+        #             inverted_mask_sum = inverted_mask_sum * in_feature.shape[1] + 1e-8
+        #             normalized_background_loss = background_loss / inverted_mask_sum
+
+        #             total_loss += (
+        #                 self.background_penalization * normalized_background_loss
+        #             )
+
+        # return (
+        #     total_loss / len(input_features)
+        #     if len(input_features) > 0
+        #     else torch.tensor(0.0)
+        # )
+
         self.feature_extractor = self.feature_extractor.to(input.device)
-        self.feature_extractor.eval()
+        target_norm = self.preprocess(target)
+        prediction_norm = self.preprocess(input)
 
-        input_preprocessed = self.preprocess(input)
-        target_preprocessed = self.preprocess(target * mask)
+        pred_features = self.feature_extractor(prediction_norm)
+        target_features = self.feature_extractor(target_norm)
 
-        input_features = self.feature_extractor(input_preprocessed)
-        with torch.no_grad():
-            target_features = self.feature_extractor(target_preprocessed)
+        total_loss = torch.tensor(0.0, device=input.device)
 
-        total_loss = 0.0
+        for pred_feat, target_feat in zip(pred_features, target_features):
 
-        for i in range(len(input_features)):
-            in_feature = input_features[i]
-            tgt_feature = target_features[i]
-
-            resized_mask = F.interpolate(
-                mask, size=in_feature.shape[-2:], mode="bilinear", align_corners=False
+            mask_downsampled = F.interpolate(
+                mask, size=pred_feat.shape[-2:], mode="bilinear", align_corners=False
             )
 
-            mask_sum = resized_mask.sum()
+            squared_error = F.mse_loss(pred_feat, target_feat, reduction="none")
 
-            if mask_sum > 1e-5:
-                masked_input_feature = in_feature * resized_mask
-                masked_target_feature = tgt_feature * resized_mask
+            num_channels = pred_feat.shape[1]
+            foreground_elements = mask_downsampled.sum() * num_channels + 1e-8
 
-                foreground_loss = self.mse_loss(
-                    masked_input_feature, masked_target_feature
-                )
+            foreground_loss_raw = (squared_error * mask_downsampled).sum()
+            foreground_loss_normalized = foreground_loss_raw / foreground_elements
 
-                mask_sum = mask_sum * in_feature.shape[1] + 1e-8
-                normalized_foreground_loss = foreground_loss / mask_sum
-
-                total_loss += normalized_foreground_loss
+            total_loss += foreground_loss_normalized
 
             if self.background_penalization > 0:
-                inverted_mask = 1 - resized_mask
-                inverted_mask_sum = inverted_mask.sum()
+                inverted_mask = 1 - mask_downsampled
+                background_elements = inverted_mask.sum() * num_channels + 1e-8
 
-                if inverted_mask_sum > 1e-5:
-                    background_input_feature = in_feature * inverted_mask
-                    background_target_feature = tgt_feature * inverted_mask
+                background_loss_raw = (squared_error * inverted_mask).sum()
+                background_loss_normalized = background_loss_raw / background_elements
 
-                    background_loss = self.mse_loss(
-                        background_input_feature, background_target_feature
-                    )
+                total_loss += self.background_penalization * background_loss_normalized
 
-                    inverted_mask_sum = inverted_mask_sum * in_feature.shape[1] + 1e-8
-                    normalized_background_loss = background_loss / inverted_mask_sum
-
-                    total_loss += (
-                        self.background_penalization * normalized_background_loss
-                    )
-
-        return (
-            total_loss / len(input_features)
-            if len(input_features) > 0
-            else torch.tensor(0.0)
-        )
+        return total_loss / len(pred_features)
 
 
 class MSRPerceptualLoss(nn.Module):
     def __init__(
-        self, alpha: float, beta: float, lambda_bg_global: float, lambda_bg_local: float
+        self,
+        alpha: float,
+        beta: float,
+        lambda_bg_global: float,
+        lambda_bg_local: float,
+        **kwargs
     ):
         """
         Args:

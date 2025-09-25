@@ -3,7 +3,7 @@ dataset:
     root: ./data/EXHAMDataset
     metadata_path: null
     image_extension: null
-    batch_size: 16
+    batch_size: 32
     val_size: 0.1
     test_size: 0.1
 
@@ -11,7 +11,7 @@ preprocess:
     img_size: 256
 
 model:
-    name: CapsNetWithAttributesMLP
+    name: CapsNetMultiDecoder
     channels: 3
     primary_dim: 8
     pose_dim: 16
@@ -32,13 +32,13 @@ trainer:
             MalignancyLoss:
                 lambda: 1.0
                 params: {}
-            MSRPerceptualLoss:
+            MSRPerceptualLossLPIPS:
                 lambda: 1.0
                 params:
-                    alpha: 1.0
-                    beta: 1.0
-                    lambda_bg_global: 1.0
-                    lambda_bg_local: 0.1
+                    lpips_net: vgg
+                    lpips_size: 224
+                    min_mask_pixels_for_crop: 64
+                    bbox_pad: 8
 
 callbacks:
     - name: PlotCallback

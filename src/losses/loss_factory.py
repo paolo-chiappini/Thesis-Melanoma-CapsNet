@@ -1,3 +1,4 @@
+import torch
 import torch.functional as F
 import torch.nn as nn
 
@@ -5,16 +6,26 @@ from utils.commons import get_classes_from_module
 
 from .losses import *
 from .losses_ae import *
+from .lpips_loss import *
 from .mpl_loss import *
 from .msr_loss import *
 from .tc_loss import *
 
 
 class CombinedLoss(nn.Module):
-    def __init__(self, loss_configs, class_weights=None, attribute_weights=None):
+    def __init__(
+        self,
+        config,
+        class_weights=None,
+        attribute_weights=None,
+        device: torch.device = "cuda",
+    ):
         super(CombinedLoss, self).__init__()
         self.loss_modules = nn.ModuleDict()
         self.loss_coefficients = {}
+
+        self.config = config
+        loss_configs = self.config["trainer"]["loss"].get("components", {})
 
         self.available_losses = get_classes_from_module(
             module_startswith="losses", parent_class=nn.Module
@@ -22,15 +33,17 @@ class CombinedLoss(nn.Module):
 
         print(f"Available losses: {self.available_losses}")
 
-        for loss_name, config in loss_configs.items():
-            if config["lambda"] > 0:
+        for loss_name, cfg in loss_configs.copy().items():
+            if cfg["lambda"] > 0:
                 loss_class = self.available_losses.get(loss_name)
                 if loss_class is None:
                     raise ValueError(f"Unknown loss type: {loss_name}")
 
-                loss_params = config.get("params", {})
+                loss_params = cfg.copy().get("params", {})
+                loss_params.update({"config": self.config})
+                loss_params.update({"device": device})
                 self.loss_modules[loss_name] = loss_class(**loss_params)
-                self.loss_coefficients[loss_name] = config["lambda"]
+                self.loss_coefficients[loss_name] = cfg["lambda"]
             else:
                 print(f"Skipping {loss_name} as its coefficient is 0.")
 
@@ -70,6 +83,21 @@ class CombinedLoss(nn.Module):
                     lesion_mask=targets["lesion_masks"],
                     attribute_masks=targets["va_masks"],
                 )
+            elif loss_name == "MSRPerceptualLossLPIPS":
+                current_loss = loss_module(
+                    targets=targets["images"],
+                    reconstructions=model_outputs["reconstructions"],
+                    masks=targets["lesion_masks"],
+                )
+
+                for k in range(targets["va_masks"].shape[1]):
+                    current_loss += loss_module(
+                        targets=targets["images"],
+                        reconstructions=model_outputs["attribute_reconstructions"][
+                            :, k, :, :, :
+                        ],
+                        masks=targets["va_masks"][:, k, :, :],
+                    )
             else:
                 raise NotImplementedError(
                     f"Forward pass not implemented for {loss_name}"

@@ -1,7 +1,11 @@
+import torch
+
 from .loss_factory import CombinedLoss
 
 
-def create_combined_loss(config, class_weights=None, attribute_weights=None):
+def create_combined_loss(
+    config, class_weights=None, attribute_weights=None, device: torch.device = "cuda"
+):
     """
     Factory function to create an instance of the CombinedLoss based on configuration.
 
@@ -13,10 +17,9 @@ def create_combined_loss(config, class_weights=None, attribute_weights=None):
     Returns:
         CombinedLoss: instance of the combined loss components.
     """
-    components_config = config.get("components", {})
-
     return CombinedLoss(
-        loss_configs=components_config,
+        config=config,
         class_weights=class_weights,
         attribute_weights=attribute_weights,
+        device=device,
     )

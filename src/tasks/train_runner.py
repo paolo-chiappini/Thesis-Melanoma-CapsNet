@@ -17,9 +17,10 @@ class TrainRunner(BaseRunner):
 
         self.build_model(load_weights=False)
         self.loss_criterion = create_combined_loss(
-            config=self.config["trainer"]["loss"],
+            config=self.config,
             class_weights=self.weights.get("class_weights"),
             attribute_weights=self.weights.get("attribute_weights"),
+            device=self.device,
         )
 
     def execute(self):

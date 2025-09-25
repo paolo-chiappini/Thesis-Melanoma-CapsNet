@@ -12,6 +12,15 @@ from torchvision.utils import save_image
 
 
 def generate_experiment_name(config: dict, max_len: int = 100):
+    # make a shallow copy
+    config_copy = {}
+    for k, v in config.items():
+        try:
+            json.dumps(v)
+            config_copy[k] = v
+        except (TypeError, ValueError):
+            config_copy[k] = str(v)
+
     dataset_name = config.get("dataset", {}).get("name", "data")
     model_cfg = config.get("model", {})
     trainer_cfg = config.get("trainer", {})
@@ -26,7 +35,7 @@ def generate_experiment_name(config: dict, max_len: int = 100):
 
     raw_name = f"{dataset_name}-{model_name}-p{pose_dim}-lr{lr}-e{epochs}-{losses}"
 
-    config_str = json.dumps(config, sort_keys=True)
+    config_str = json.dumps(config_copy, sort_keys=True)
     hash_digest = hashlib.md5(config_str.encode()).hexdigest()[:6]
 
     experiment_name = f"{raw_name}-{hash_digest}"

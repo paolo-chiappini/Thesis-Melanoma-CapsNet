@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 
 from utils.commons import compute_weighted_accuracy
 from utils.visualization.plot_reconstruction_examples import (
@@ -19,6 +20,13 @@ class CapsNetTrainerMPL(BaseTrainer):
         local_reconstructions = outputs["attribute_reconstructions"]
 
         total_loss = self.criterion(model_outputs=outputs, targets=batch_data)
+
+        self.pixel_criterion = nn.L1Loss()
+        loss_global_pixel = self.pixel_criterion(
+            global_reconstructions * lesion_masks, images * lesion_masks
+        )
+
+        total_loss.update({"global_pixel": loss_global_pixel * 10.0})
 
         if self.current_phase == "val" and self.current_batch == len(
             self.loaders["val"]

@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 
 class MarginLoss(nn.Module):
-    def __init__(self, size_average=False, loss_lambda=0.5):
+    def __init__(self, size_average=False, loss_lambda=0.5, **kwargs):
         """
         Lk = Tk max(0, m+ - ||vk||)2 + λ (1 - Tk) max(0, ||vk|| - m-)2      (4)
         """

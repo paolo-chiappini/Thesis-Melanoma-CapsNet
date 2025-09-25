@@ -13,7 +13,7 @@ class PerturbationRunner(BaseRunner):
 
         self.build_model(load_weights=True)
         self.loss_criterion = create_combined_loss(
-            config=self.config["trainer"]["loss"]
+            config=self.config, device=self.device
         )
 
     def execute(self):
