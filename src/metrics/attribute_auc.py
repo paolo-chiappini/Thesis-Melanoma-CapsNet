@@ -12,13 +12,16 @@ from sklearn.metrics import (
 )
 
 
-def compute_per_attribute_auc(y_true: np.ndarray, logits: np.ndarray) -> dict:
+def compute_per_attribute_auc(
+    y_true: np.ndarray, logits: np.ndarray, attribute_names: list
+) -> dict:
     """
     Computes per-attribute AUROC and AUPRC.
 
     Args:
         y_true (np.ndarray): Ground truth labels (N, K), values {0, 1}.
         logits (np.ndarray): Predicted attribute logits (N, K).
+        attribute_names (list): list of names of attributes (K).
 
     Returns:
         dict: {
@@ -37,8 +40,8 @@ def compute_per_attribute_auc(y_true: np.ndarray, logits: np.ndarray) -> dict:
         prob_k = prob_np[:, k]
 
         if np.unique(y_true_k).size == 1:
-            auroc = float("nan")
-            auprc = float("nan")
+            auroc = np.nan
+            auprc = np.nan
         else:
             auroc = roc_auc_score(y_true_k, prob_k)
             auprc = average_precision_score(y_true_k, prob_k)
