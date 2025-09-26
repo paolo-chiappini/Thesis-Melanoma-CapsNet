@@ -48,7 +48,9 @@ class SimpleDecoder(nn.Module):
             UpconvBlock(self.init_channels, base_channels // 2),
             UpconvBlock(base_channels // 2, base_channels // 4),
             UpconvBlock(base_channels // 4, base_channels // 8),
-            nn.Conv2d(base_channels // 8, 3, kernel_size=3, padding=1),
+            UpconvBlock(base_channels // 8, base_channels // 16),
+            UpconvBlock(base_channels // 16, base_channels // 32),
+            nn.Conv2d(base_channels // 32, 3, kernel_size=3, padding=1),
             nn.Sigmoid(),
         )
 
@@ -121,9 +123,13 @@ class SharedFiLMDecoder(nn.Module):
         self.up2 = UpconvBlock(base_channels // 2, base_channels // 4)
         self.film3 = FiLMBlock(base_channels // 4, film_dim)
         self.up3 = UpconvBlock(base_channels // 4, base_channels // 8)
+        self.film4 = FiLMBlock(base_channels // 8, film_dim)
+        self.up4 = UpconvBlock(base_channels // 8, base_channels // 16)
+        self.film5 = FiLMBlock(base_channels // 16, film_dim)
+        self.up5 = UpconvBlock(base_channels // 16, base_channels // 32)
 
         self.to_rgb = nn.Sequential(
-            nn.Conv2d(base_channels // 8, 3, kernel_size=3, padding=1), nn.Sigmoid()
+            nn.Conv2d(base_channels // 32, 3, kernel_size=3, padding=1), nn.Sigmoid()
         )
 
     def forward(
@@ -139,6 +145,10 @@ class SharedFiLMDecoder(nn.Module):
         x = self.up2(x)
         x = self.film3(x, film_vec)
         x = self.up3(x)
+        x = self.film4(x, film_vec)
+        x = self.up4(x)
+        x = self.film5(x, film_vec)
+        x = self.up5(x)
 
         x = self.to_rgb(x)
 

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from sparsemax import Sparsemax
+
 from utils.functional import squash
 
 
@@ -33,11 +34,6 @@ class RoutingCapsules(nn.Module):
         self.device = device
         self.routing_algorithm = routing_algorithm
 
-        assert routing_algorithm in [
-            "sigmoid",
-            "softmax",
-        ], "Activation function must be either 'sigmoid' or 'softmax'"
-
         # Random initialization of the W matrix
         self.W = nn.Parameter(
             0.01
@@ -45,6 +41,20 @@ class RoutingCapsules(nn.Module):
                 1, num_class_caps, num_input_caps, capsule_dimension, input_dim
             )
         )
+
+        self.routing_activation = None
+        if self.routing_algorithm == "sigmoid":
+            self.routing_activation = (
+                nn.Sigmoid()
+            )  # Sigmoid routing like in LaLonde et al.
+        elif self.routing_algorithm == "softmax":
+            self.routing_activation = nn.Softmax(dim=1)
+        elif self.routing_algorithm == "sparsemax":
+            self.routing_activation = Sparsemax(dim=1)
+        else:
+            raise ValueError(
+                f"Unsupported routing algorithm for {self.routing_algorithm}."
+            )
 
     def __repr__(self):
         tab = "\t"
@@ -86,19 +96,13 @@ class RoutingCapsules(nn.Module):
             device
         )
         for r in range(self.routing_steps - 1):
-            if self.routing_algorithm == "sigmoid":
-                c = torch.sigmoid(b)  # Sigmoid routing like in LaLonde et al.
-            elif self.routing_algorithm == "softmax":
-                c = F.softmax(b, dim=1)
+            c = self.routing_activation(b)
             s = (c * detached_u_hat).sum(dim=2)
             v = squash(s)
             b += torch.matmul(detached_u_hat, v.unsqueeze(-1))
 
         # Perform last iteration on attached u_hat
-        if self.routing_algorithm == "sigmoid":
-            c = torch.sigmoid(b)  # Sigmoid routing like in LaLonde et al.
-        elif self.routing_algorithm == "softmax":
-            c = F.softmax(b, dim=1)
+        c = self.routing_activation(b)
         s = (c * u_hat).sum(dim=2)
         v = squash(s)
 

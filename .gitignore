@@ -181,6 +181,7 @@ data
 
 # saved models
 checkpoints
+tb_runs
 
 # logs and output plots
 logs/*

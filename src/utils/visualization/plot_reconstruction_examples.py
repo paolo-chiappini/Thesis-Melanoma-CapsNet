@@ -112,7 +112,7 @@ def plot_reconstruction_examples(
         filename = f"recon_sample_{idx.item()}"
 
         if logger:
-            logger.save_image(fig, filename)
+            logger.log_image(image=fig, name=filename, step=epoch)
         elif show:
             plt.show()
         else:

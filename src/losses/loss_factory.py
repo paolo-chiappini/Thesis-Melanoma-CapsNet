@@ -1,3 +1,5 @@
+import copy
+
 import torch
 import torch.functional as F
 import torch.nn as nn
@@ -39,9 +41,10 @@ class CombinedLoss(nn.Module):
                 if loss_class is None:
                     raise ValueError(f"Unknown loss type: {loss_name}")
 
-                loss_params = cfg.copy().get("params", {})
-                loss_params.update({"config": self.config})
-                loss_params.update({"device": device})
+                loss_params = copy.deepcopy(cfg.get("params", {}))
+                loss_params["config"] = self.config
+                loss_params["device"] = device
+
                 self.loss_modules[loss_name] = loss_class(**loss_params)
                 self.loss_coefficients[loss_name] = cfg["lambda"]
             else:

@@ -384,6 +384,6 @@ class BaseTrainer(ABC):
         print(f"Test Results on {split} split -> {results}")
 
         if self.logger:
-            self.logger.save_metrics(metrics=results)
+            self.logger.log_metrics(metrics=results, step=0)
 
         return results

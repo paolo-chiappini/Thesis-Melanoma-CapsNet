@@ -17,7 +17,7 @@ model:
     pose_dim: 16
     num_classes: 2
     routing_steps: 3
-    routing_algorithm: sigmoid
+    routing_algorithm: sparsemax
 
 trainer:
     name: CapsNetTrainerMPL
@@ -43,7 +43,7 @@ trainer:
 callbacks:
     - name: PlotCallback
     - name: ReconstructionCallback
-      frequency: 5
+      frequency: 1
     - name: EarlyStoppingCallback
       patience: 20
       min_delta: 0.03
@@ -60,7 +60,7 @@ metrics:
 system:
     seed: 123
     augment: True
-    save_name: experiment_L1_and_perceptual
+    save_name: experiment_sparsemax
     save_path: ./checkpoints/
 
 perturbation:

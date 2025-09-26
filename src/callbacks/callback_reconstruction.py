@@ -61,7 +61,7 @@ class ReconstructionCallback(Callback):
         if self.show:
             plt.show()
         elif self.logger:
-            self.logger.save_plot(plt.gcf(), name=filename)
+            self.logger.log_image(image=plt.gcf(), name=filename, step=epoch)
         else:
             plt.savefig(f"{filename}.png")
         plt.close()

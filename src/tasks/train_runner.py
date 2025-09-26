@@ -1,7 +1,7 @@
 from callbacks import CallbackManager, get_callbacks
 from losses import create_combined_loss
 from trainers import get_trainer
-from utils.logs.training_logger import TrainingLogger
+from utils.logs.tb_logger import TBLogger
 
 from .base_runner import BaseRunner
 
@@ -37,7 +37,8 @@ class TrainRunner(BaseRunner):
         if self.config["system"].get("use_weighted_metrics", False):
             trainer.set_weights(weights_dict=self.weights)
 
-        logger = None if self.no_save else TrainingLogger(config=self.config)
+        # logger = None if self.no_save else TrainingLogger(config=self.config)
+        logger = None if self.no_save else TBLogger(config=self.config)
 
         callbacks = get_callbacks(callback_config=self.config.get("callbacks", []))
         callback_manager = CallbackManager(callbacks=callbacks, logger=logger)
@@ -48,3 +49,6 @@ class TrainRunner(BaseRunner):
 
         trainer.run(self.config["trainer"]["epochs"], callback_manager=callback_manager)
         trainer.test(split="val")
+
+        if logger is not None:
+            logger.close()

@@ -54,7 +54,9 @@ class PlotCallback(Callback):
         if self.show:
             plt.show()
         elif self.logger:
-            self.logger.save_plot(plt.gcf(), name=self.filename.replace(".png", ""))
+            self.logger.log_image(
+                image=plt.gcf(), name=self.filename.replace(".png", ""), step=epoch
+            )
         else:
             plt.savefig(os.path.join(self.save_dir, self.filename))
         plt.close()

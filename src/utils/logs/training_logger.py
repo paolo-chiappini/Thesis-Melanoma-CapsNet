@@ -88,7 +88,7 @@ class TrainingLogger:
         torch.save(state_dict_cpu, model_path)
         print(f"Model saved to {model_path}")
 
-    def save_metrics(self, metrics: dict, filename="metrics.json"):
+    def log_metrics(self, metrics: dict, filename="metrics.json"):
         metrics_path = os.path.join(self.metrics_dir, filename)
         with open(metrics_path, "w") as f:
             json.dump(metrics, f, indent=4)
@@ -99,7 +99,7 @@ class TrainingLogger:
         figure.savefig(path)
         print(f"Plot saved to {path}")
 
-    def save_image(self, image, name: str):
+    def log_image(self, image, name: str):
         path = os.path.join(self.images_dir, f"{name}.png")
 
         if isinstance(image, torch.Tensor):
