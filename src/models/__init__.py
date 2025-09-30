@@ -13,6 +13,7 @@ from .model_sanity_check import SanityCheckModel
 from .model_transfer import TransferModel
 from .variants.model_capsnet_attr_mlp import CapsNetWithAttributesMLP
 from .variants.model_capsnet_attr_mlp_pre import CapsNetWithAttributesMLP_Pre
+from .variants.model_capsnet_mlp_gated import CapsNetWithAttributesMLPGated
 from .variants.model_multi_decoder import CapsNetMultiDecoder
 
 

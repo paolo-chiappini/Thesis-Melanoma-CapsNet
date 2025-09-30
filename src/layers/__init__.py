@@ -6,6 +6,7 @@ from .hungarian_matcher import HungarianMatcher
 from .malignancy_predictor import MalignancyPredictor
 from .primary_capsules import PrimaryCapsules
 from .routing_capsules import RoutingCapsules
+from .statistics_network import StatisticsNetwork
 
 __all__ = [
     "Conv2d_BN",
@@ -18,4 +19,5 @@ __all__ = [
     "HungarianMatcher",
     "SharedFiLMDecoder",
     "SimpleDecoder",
+    "StatisticsNetwork",
 ]

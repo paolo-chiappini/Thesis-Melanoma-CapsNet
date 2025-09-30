@@ -188,6 +188,21 @@ class BaseTrainer(ABC):
             losses = self.compute_loss(outputs, batch_data)
             losses = losses if isinstance(losses, dict) else {"loss": losses}
             total_loss = sum(losses.values())
+
+            # used for MINE StatisticsNetwork training (may be used for other Neural Estimators)
+            if hasattr(self.criterion, "train_auxiliary") and callable(
+                self.criterion.train_auxiliary
+            ):
+                poses = outputs.get("attribute_poses")
+                if poses is not None:
+                    self.criterion.train_auxiliary(
+                        poses, batch_data["visual_attributes_targets"]
+                    )
+                else:
+                    print(
+                        "WARNING: Criterion has 'train_auxiliary' but model output has no 'attribute_poses'."
+                    )
+
             total_loss.backward()
             self.optimizer.step()
 
@@ -311,6 +326,10 @@ class BaseTrainer(ABC):
                     epoch,
                     split,
                 )
+
+        if self.logger:
+            self.logger.log_metrics(metrics=avg_metrics, step=epoch)
+
         return running_loss / len(loader)
 
     def save_checkpoint(self, name=None):
@@ -384,6 +403,6 @@ class BaseTrainer(ABC):
         print(f"Test Results on {split} split -> {results}")
 
         if self.logger:
-            self.logger.log_metrics(metrics=results, step=0)
+            self.logger.log_metrics(metrics=results, step=self.current_epoch + 1)
 
         return results

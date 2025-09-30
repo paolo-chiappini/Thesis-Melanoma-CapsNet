@@ -113,63 +113,71 @@ def bootstrap_evaluate(
     return pd.DataFrame(bootstrap_results)
 
 
+def reshape_bootstrap_df(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df["Bootstrap"] = df.index
+
+    metric_columns = [
+        col
+        for col in df.columns
+        if col.startswith("AUROC_") or col.startswith("AUPRC_")
+    ]
+
+    long_df = df.melt(
+        id_vars=["Bootstrap"],
+        value_vars=metric_columns,
+        var_name="Metric",
+        value_name="Value",
+    )
+
+    long_df["Prefix"] = long_df["Metric"].str.extract(r"^(AUROC|AUPRC)")
+    long_df["Attribute"] = long_df["Metric"].str.extract(r"^[^_]+_(.+)")
+
+    return long_df
+
+
 def plot_metric_comparison(
-    summary_df: pd.DataFrame, title: str, metric_prefix: str = "AUC_"
+    long_df: pd.DataFrame, title: str, metric_prefix: str = "AUC_"
 ) -> plt.figure:
     """
     Creates a bar chart with error bars for a set of metrics.
 
     Args:
-        summary_df (pd.DataFrame): summary DataFrame from bootstrapping.
+        long_df (pd.DataFrame): (reshaped) long DataFrame from bootstrapping.
         title (str): title for the plot.
         metric_prefix (str): prefix to identify which metrics to plot (e.g. 'AUC_').
 
     Returns:
         a matplotlib figure containing the bar chart with error bars.
     """
-    plot_data = summary_df[summary_df.index.str.startswith(metric_prefix)].copy()
+    plot_data = long_df[long_df["Prefix"] == metric_prefix].copy()
 
     if plot_data.empty:
-        print(
-            f"Cannot generate plot '{title}' because no data remains after filtering with prefix '{metric_prefix}'."
-        )
+        print(f"No data for prefix '{metric_prefix}'")
         return plt.figure()
-
-    plot_data["Attribute"] = plot_data.index.str.replace(metric_prefix, "", regex=False)
-
-    error = ((plot_data["95% CI upper"] - plot_data["95% CI lower"]) / 2).values
 
     plt.style.use("seaborn-v0_8-whitegrid")
     fig, ax = plt.subplots(figsize=(12, 8))
 
-    sns.barplot(
+    sns.boxplot(
         data=plot_data,
-        x="Mean",
+        x="Value",
         y="Attribute",
         hue="Attribute",
         palette="viridis",
         ax=ax,
-        legend=False,
-    )
-
-    ax.errorbar(
-        x=plot_data["Mean"],
-        y=plot_data["Attribute"],
-        xerr=error,
-        fmt="none",
-        ecolor="black",
-        capsize=5,
+        dodge=False,
+        showfliers=True,
     )
 
     ax.set_title(title, fontsize=16, pad=20)
-    ax.set_xlabel("Mean Score", fontsize=12)
+    ax.set_xlabel("Score", fontsize=12)
     ax.set_ylabel("Attribute", fontsize=12)
 
-    if "AUROC" in metric_prefix:
-        ax.axvline(x=0.5, color="r", linestyle="--", label="Chance (AUC=0.5)")
+    if metric_prefix.upper() == "AUROC":
+        ax.axvline(x=0.5, color="r", linestyle="--", label="Chance (AUC = 0.5)")
         ax.legend()
 
-    ax.grid(alpha=0.4, which="both")
     fig.tight_layout()
     return fig
 
@@ -263,6 +271,9 @@ class EvaluateRunner(BaseRunner):
             n_bootstrap=1000,
         )
 
+        bootstrap_dataframe.to_csv("figures/bootstrap_dataframe.csv")
+        print("Saved summary with CI at figures/bootstrap_dataframe.csv")
+
         mean_auroc_dist_fig = plot_distribution(
             bootstrap_dataframe,
             metric_name="AUROC_mean",
@@ -296,25 +307,24 @@ class EvaluateRunner(BaseRunner):
             }
         )
 
-        with pd.option_context("display.precision", 4):
-            print(summary_dataframe)
-
         summary_dataframe.to_csv("figures/evaluation_summary_with_confidence.csv")
         print("Saved summary with CI at figures/evaluation_summary_with_confidence.csv")
 
         auroc_ci_save_path = "figures/auroc_comparison_with_ci.pdf"
         auprc_ci_save_path = "figures/auprc_comparison_with_ci.pdf"
 
+        long_bootstrap_df = reshape_bootstrap_df(df=bootstrap_dataframe)
+
         auroc_comparison_fig = plot_metric_comparison(
-            summary_df=summary_dataframe,
+            long_df=long_bootstrap_df,
             title="Per-attribute AUROC with 95% CIs",
-            metric_prefix="AUROC_",
+            metric_prefix="AUROC",
         )
         auroc_comparison_fig.savefig(auroc_ci_save_path, dpi=300, bbox_inches="tight")
         auprc_comparison_fig = plot_metric_comparison(
-            summary_df=summary_dataframe,
+            long_df=long_bootstrap_df,
             title="Per-attribute AUPRC with 95% CIs",
-            metric_prefix="AUPRC_",
+            metric_prefix="AUPRC",
         )
         auprc_comparison_fig.savefig(auprc_ci_save_path, dpi=300, bbox_inches="tight")
 

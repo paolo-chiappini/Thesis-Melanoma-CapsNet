@@ -9,6 +9,7 @@ from utils.commons import get_classes_from_module
 from .losses import *
 from .losses_ae import *
 from .lpips_loss import *
+from .mig_loss import *
 from .mpl_loss import *
 from .msr_loss import *
 from .tc_loss import *
@@ -101,6 +102,11 @@ class CombinedLoss(nn.Module):
                         ],
                         masks=targets["va_masks"][:, k, :, :],
                     )
+            elif loss_name == "MIGLoss":
+                current_loss = loss_module(
+                    attribute_poses=model_outputs.get("attribute_poses"),
+                    va_labels=targets.get("visual_attributes_targets"),
+                )
             else:
                 raise NotImplementedError(
                     f"Forward pass not implemented for {loss_name}"

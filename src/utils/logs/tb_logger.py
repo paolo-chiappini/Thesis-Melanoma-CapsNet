@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime
 
@@ -42,6 +43,12 @@ class TBLogger:
         for key, value in metrics.items():
             if isinstance(value, (int, float)):
                 self.writer.add_scalar(key, value, step)
+
+        # dump to json for easy reading
+        record = {"step": step, **metrics}
+        with open(f"{self.log_dir}/metrics.json", "w") as f:
+            f.write(json.dumps(record) + "\n")
+
         print("Metrics saved")
 
     def log_image(self, name: str, image, step: int):

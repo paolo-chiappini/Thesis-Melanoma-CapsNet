@@ -3,7 +3,7 @@ dataset:
     root: ./data/EXHAMDataset
     metadata_path: null
     image_extension: null
-    batch_size: 16
+    batch_size: 28
     val_size: 0.1
     test_size: 0.1
 
@@ -39,6 +39,11 @@ trainer:
                     beta: 1.0
                     lambda_bg_global: 1.0
                     lambda_bg_local: 0.1
+            MIGLoss:
+                lambda: 1.0
+                params:
+                    pose_dim: 16
+                    num_attributes: 8
 
 callbacks:
     - name: PlotCallback

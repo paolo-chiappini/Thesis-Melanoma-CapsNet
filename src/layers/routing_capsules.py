@@ -107,3 +107,4 @@ class RoutingCapsules(nn.Module):
         v = squash(s)
 
         return s  # We return the unsquashed vector to avoid problems with logits
+        # return squash(s)
