@@ -1,7 +1,8 @@
 from .base_dataset import BaseDataset
-from .exham_dataset.exham_loader import EXHAMDataset
-from .isic_dataset.isic_loader import ISICDataset
-from .ph2_dataset.ph2_loader import PH2Dataset
+from .exham_dataset.exham_loader import EXHAMDataset  # noqa: F401
+from .isic_dataset.isic_loader import ISICDataset  # noqa: F401
+from .ph2_dataset.ph2_loader import PH2Dataset  # noqa: F401
+from .toy_dataset.toy_loader import ToyDataset  # noqa: F401
 
 DATASET_REGISTRY = {cls.__name__: cls for cls in BaseDataset.__subclasses__()}
 

@@ -1,8 +1,12 @@
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scienceplots  # noqa: F401
 import seaborn as sns
+import torch
+from sklearn.metrics import classification_report, confusion_matrix
 from tqdm import tqdm
 
 from losses import create_combined_loss
@@ -223,6 +227,153 @@ def plot_distribution(bootstrap_df: pd.DataFrame, metric_name: str, title: str):
     return fig
 
 
+def plot_normalized_multilabel_cm(
+    y_true: np.ndarray,
+    logits: np.ndarray,
+    attribute_names: list,
+    threshold: float = 0.5,
+) -> plt.Figure:
+    """
+    Generates a normalized multilabel confusion matrix.
+
+    The diagonal (i, i) shows the RECALL (True Positive Rate) for attribute i.
+    The off-diagonal (i, j) shows the rate of samples that were TRUE for i
+    and PREDICTED as j, normalized by the total number of true i samples.
+    """
+    y_pred = (torch.sigmoid(torch.tensor(logits)) > threshold).int().numpy()
+    num_attributes = len(attribute_names)
+    conf_matrix = np.zeros((num_attributes, num_attributes), dtype=float)
+
+    for i in range(num_attributes):
+        support_i = np.sum(y_true[:, i])
+
+        if support_i == 0:
+            continue
+
+        for j in range(num_attributes):
+            true_i_and_pred_j = np.sum((y_true[:, i] == 1) & (y_pred[:, j] == 1))
+
+            conf_matrix[i, j] = true_i_and_pred_j / support_i
+
+    fig, ax = plt.subplots(figsize=(12, 10))
+    sns.heatmap(
+        conf_matrix,
+        annot=True,
+        fmt=".2f",
+        cmap="viridis",
+        ax=ax,
+        xticklabels=attribute_names,
+        yticklabels=attribute_names,
+    )
+
+    ax.set_title(
+        "Normalized Multilabel Confusion Matrix (Rows sum to Recall)",
+        fontsize=16,
+        pad=20,
+    )
+    ax.set_xlabel("Predicted Attributes", fontsize=12)
+    ax.set_ylabel("True Attributes", fontsize=12)
+    plt.xticks(rotation=45, ha="right")
+    plt.yticks(rotation=0)
+    fig.tight_layout()
+    return fig
+
+
+def plot_multilabel_metric_heatmap(
+    y_true: np.ndarray,
+    logits: np.ndarray,
+    attribute_names: list,
+    threshold: float = 0.5,
+) -> plt.Figure:
+    """
+    Generates a heatmap of key classification metrics (Precision, Recall, F1-Score)
+    for each attribute, providing a comprehensive, imbalance-aware summary.
+    """
+    y_pred = (torch.sigmoid(torch.tensor(logits)) > threshold).int().numpy()
+
+    report = classification_report(
+        y_true, y_pred, target_names=attribute_names, output_dict=True, zero_division=0
+    )
+
+    report_df = pd.DataFrame(report).transpose()
+
+    metric_cols = ["precision", "recall", "f1-score", "support"]
+    plot_df = report_df.loc[attribute_names, metric_cols]
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.heatmap(plot_df, annot=True, fmt=".2f", cmap="YlGnBu", ax=ax)
+
+    ax.set_title("Per-Attribute Classification Metrics", fontsize=16, pad=20)
+    ax.set_xlabel("Metrics", fontsize=12)
+    ax.set_ylabel("Attributes", fontsize=12)
+    plt.xticks(rotation=0)
+    plt.yticks(rotation=0)
+    fig.tight_layout()
+    return fig
+
+
+def _plot_single_cm_on_ax(ax, y_true, logits, attribute_name, threshold=0.5):
+    """Helper function to plot one confusion matrix on a given matplotlib Axes."""
+    y_pred = (torch.sigmoid(torch.tensor(logits)) > threshold).int().numpy()
+    cm = confusion_matrix(y_true, y_pred)
+
+    if cm.shape != (2, 2):
+        _cm = np.zeros((2, 2), dtype=int)
+        _cm[: cm.shape[0], : cm.shape[1]] = cm
+        cm = _cm
+
+    cm_normalized = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
+
+    annot = np.array(
+        [
+            [f"{count}\n({pct:.1%})" for count, pct in zip(row_val, row_norm)]
+            for row_val, row_norm in zip(cm, cm_normalized)
+        ]
+    )
+
+    sns.heatmap(cm_normalized, annot=annot, fmt="", cmap="Blues", ax=ax, cbar=False)
+    ax.set_title(attribute_name)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
+    ax.xaxis.set_ticklabels(["Neg", "Pos"])
+    ax.yaxis.set_ticklabels(["Neg", "Pos"])
+
+
+def plot_combined_confusion_matrices(
+    y_true: np.ndarray, logits: np.ndarray, attribute_names: list
+) -> plt.Figure:
+    """
+    Generates a single figure with a grid of confusion matrices, one for each attribute.
+    """
+    valid_attributes = [
+        (k, name)
+        for k, name in enumerate(attribute_names)
+        if np.unique(y_true[:, k]).size > 1
+    ]
+
+    num_plots = len(valid_attributes)
+    if num_plots == 0:
+        return plt.figure()
+
+    ncols = math.ceil(math.sqrt(num_plots))
+    nrows = math.ceil(num_plots / ncols)
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 5, nrows * 4.5))
+    axes = axes.flatten()
+
+    for i, (k, name) in enumerate(valid_attributes):
+        _plot_single_cm_on_ax(
+            ax=axes[i], y_true=y_true[:, k], logits=logits[:, k], attribute_name=name
+        )
+
+    for j in range(num_plots, len(axes)):
+        axes[j].set_visible(False)
+
+    fig.suptitle("Per-Attribute Confusion Matrices", fontsize=16, y=1.02)
+    fig.tight_layout()
+    return fig
+
+
 class EvaluateRunner(BaseRunner):
     def prepare(self):
         self.prepare_dataset(is_train=False)
@@ -262,6 +413,40 @@ class EvaluateRunner(BaseRunner):
         attribute_logits = np.concatenate(attribute_logits_list, axis=0)
         malignancy_scores = np.concatenate(malignancy_scores_list, axis=0)
         attributes_gt = np.concatenate(attributes_gt, axis=0)
+
+        multilabel_cm_fig = plot_normalized_multilabel_cm(
+            y_true=attributes_gt,
+            logits=attribute_logits,
+            attribute_names=attribute_names,
+        )
+        multilabel_cm_fig.savefig(
+            "figures/multilabel_confusion_matrix.pdf", dpi=300, bbox_inches="tight"
+        )
+        print(
+            "Saved multilabel confusion matrix to: figures/multilabel_confusion_matrix.pdf"
+        )
+
+        cm_grid_fig = plot_combined_confusion_matrices(
+            y_true=attributes_gt,
+            logits=attribute_logits,
+            attribute_names=attribute_names,
+        )
+        cm_grid_fig.savefig(
+            "figures/combined_confusion_matrices.pdf", dpi=300, bbox_inches="tight"
+        )
+        print(
+            "Saved grid of confusion matrices to: figures/combined_confusion_matrices.pdf"
+        )
+
+        multilabel_metric_fig = plot_multilabel_metric_heatmap(
+            y_true=attributes_gt,
+            logits=attribute_logits,
+            attribute_names=attribute_names,
+        )
+        multilabel_metric_fig.savefig(
+            "figures/multilabel_metric_heatmap.pdf", dpi=300, bbox_inches="tight"
+        )
+        print("Saved metrics heatmap to: figures/multilabel_metric_heatmap.pdf")
 
         bootstrap_dataframe = bootstrap_evaluate(
             attribute_poses=attribute_poses,
@@ -332,13 +517,13 @@ class EvaluateRunner(BaseRunner):
         mi_matrix = compute_pairwise_mi(summary)
         plot_mi_heatmap(mi_matrix, filename="figures/pairwise_mi.pdf")
 
-        print(mi_matrix)
+        # print(mi_matrix)
 
         results = compute_mig_score(
             latent_poses=attribute_poses, true_labels=attributes_gt
         )
 
-        print(results)
+        # print(results)
 
         plot_mig_heatmap(results, filename="figures/mig.pdf")
         print(f"MIG score: {results['mig_score']}")
