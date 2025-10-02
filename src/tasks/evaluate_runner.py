@@ -1,4 +1,5 @@
 import math
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -374,6 +375,98 @@ def plot_combined_confusion_matrices(
     return fig
 
 
+def plot_logit_distributions(
+    y_true: np.ndarray, logits: np.ndarray, attribute_names: List[str]
+) -> plt.Figure:
+    """
+    Generates a faceted KDE plot of logit distributions, stratified by ground truth.
+
+    This plot is a powerful diagnostic tool to visualize classifier calibration and
+    discriminative power for each attribute in a multilabel setting.
+
+    Args:
+        y_true (np.ndarray): Ground truth labels (N, K), values {0, 1}.
+        logits (np.ndarray): Predicted attribute logits (N, K).
+        attribute_names (List[str]): List of K attribute names for labeling subplots.
+
+    Returns:
+        plt.Figure: A matplotlib Figure object containing the complete faceted plot.
+    """
+    num_samples, num_attributes = y_true.shape
+
+    data_list = []
+    for k, name in enumerate(attribute_names):
+        for i in range(num_samples):
+            data_list.append(
+                {
+                    "attribute": name,
+                    "logit": logits[i, k],
+                    "label": "Present (GT=1)" if y_true[i, k] == 1 else "Absent (GT=0)",
+                }
+            )
+    df = pd.DataFrame(data_list)
+
+    ncols = math.ceil(math.sqrt(num_attributes))
+    nrows = math.ceil(num_attributes / ncols)
+
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=(ncols * 5, nrows * 4), sharex=True, sharey=True
+    )
+    axes = axes.flatten()
+
+    palette = {"Absent (GT=0)": "cornflowerblue", "Present (GT=1)": "tomato"}
+
+    for i, attr_name in enumerate(attribute_names):
+        ax = axes[i]
+        subset_df = df[df["attribute"] == attr_name]
+
+        sns.kdeplot(
+            data=subset_df,
+            x="logit",
+            hue="label",
+            fill=True,
+            alpha=0.5,
+            palette=palette,
+            ax=ax,
+            cut=0,
+        )
+
+        ax.axvline(
+            x=0,
+            color="black",
+            linestyle="--",
+            lw=2,
+            label="Decision Boundary (logit=0)",
+        )
+
+        mean_absent = subset_df[subset_df["label"] == "Absent (GT=0)"]["logit"].mean()
+        mean_present = subset_df[subset_df["label"] == "Present (GT=1)"]["logit"].mean()
+
+        ax.axvline(x=mean_absent, color=palette["Absent (GT=0)"], linestyle=":", lw=2)
+        ax.axvline(x=mean_present, color=palette["Present (GT=1)"], linestyle=":", lw=2)
+
+        ax.set_title(attr_name, fontsize=12)
+        ax.set_xlabel("Logit Value")
+        ax.set_ylabel("Density" if i % ncols == 0 else "")
+
+        if i == 0:
+            ax.legend()
+        else:
+            ax.get_legend().remove()
+
+    for j in range(num_attributes, len(axes)):
+        axes[j].set_visible(False)
+
+    fig.suptitle(
+        "Distribution of Predicted Logits, Stratified by Ground-Truth Label",
+        fontsize=16,
+        y=1.02,
+    )
+    fig.tight_layout()
+
+    return fig
+
+
 class EvaluateRunner(BaseRunner):
     def prepare(self):
         self.prepare_dataset(is_train=False)
@@ -413,6 +506,16 @@ class EvaluateRunner(BaseRunner):
         attribute_logits = np.concatenate(attribute_logits_list, axis=0)
         malignancy_scores = np.concatenate(malignancy_scores_list, axis=0)
         attributes_gt = np.concatenate(attributes_gt, axis=0)
+
+        logit_dist_fig = plot_logit_distributions(
+            y_true=attributes_gt,
+            logits=attribute_logits,
+            attribute_names=attribute_names,
+        )
+
+        logit_dist_save_path = "figures/logit_distributions.pdf"
+        logit_dist_fig.savefig(logit_dist_save_path, dpi=300, bbox_inches="tight")
+        print(f"Saved logit distribution plot to: {logit_dist_save_path}")
 
         multilabel_cm_fig = plot_normalized_multilabel_cm(
             y_true=attributes_gt,

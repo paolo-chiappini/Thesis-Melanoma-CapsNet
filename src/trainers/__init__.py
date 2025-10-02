@@ -9,8 +9,8 @@ from .trainer_capsnet_vas import CapsNetTrainerVAs
 from .trainer_hungarian import CapsNetTrainerHungarian
 from .trainer_mpl import CapsNetTrainerMPL
 from .trainer_msr import CapsNetTrainerMSR
+from .trainer_resnet_classifier import ResnetClassifierTrainer
 from .trainer_sanity_check import SanityCheckTrainer
-from .trainer_transfer import TransferTrainer
 
 
 def get_trainer(

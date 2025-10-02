@@ -79,7 +79,7 @@ class EXHAMDataset(BaseDataset):
             # "SPC",
             "TRBL",
             "WLSA",
-            "None",  # Used to capture other background information.
+            # "None",  # Used to capture other background information.
         ]
         self.labels = self.data[self.label]
 

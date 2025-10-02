@@ -9,10 +9,11 @@ from .autoencoder import ConvAutoencoder
 from .model_base_capsnet import CapsuleNetworkBase
 from .model_conv_attributes_32 import CapsuleNetworkWithAttributes32
 from .model_pretrained import ModelPretrainedCapsnet
+from .model_resnet_classifier import ResnetClassifier
 from .model_sanity_check import SanityCheckModel
-from .model_transfer import TransferModel
 from .variants.model_capsnet_attr_mlp import CapsNetWithAttributesMLP
 from .variants.model_capsnet_attr_mlp_pre import CapsNetWithAttributesMLP_Pre
+from .variants.model_capsnet_attr_mlp_upconv import CapsNetWithAttributesMLPUpconv
 from .variants.model_capsnet_mlp_gated import CapsNetWithAttributesMLPGated
 from .variants.model_multi_decoder import CapsNetMultiDecoder
 

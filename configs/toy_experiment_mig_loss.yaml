@@ -1,9 +1,11 @@
 dataset:
-    name: EXHAMDataset
-    root: ./data/EXHAMDataset
+    # name: EXHAMDataset
+    name: ToyDataset
+    # root: ./data/EXHAMDataset
+    root: ./data/ToyDataset
     metadata_path: null
     image_extension: null
-    batch_size: 24
+    batch_size: 16
     val_size: 0.1
     test_size: 0.1
 
@@ -67,7 +69,7 @@ metrics:
 system:
     seed: 123
     augment: True
-    save_name: bce_only_SQUASH
+    save_name: toy_newDecoder_SQUASH
     save_path: ./checkpoints/
 
 perturbation:

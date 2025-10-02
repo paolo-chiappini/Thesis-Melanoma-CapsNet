@@ -1,10 +1,9 @@
 import torch
-import torch.nn as nn
 
 from .trainer_base import BaseTrainer
 
 
-class TransferTrainer(BaseTrainer):
+class ResnetClassifierTrainer(BaseTrainer):
     def __init__(
         self,
         model,
@@ -29,46 +28,35 @@ class TransferTrainer(BaseTrainer):
             metrics,
         )
 
-    def set_weights(self, weights_dict):
-        super().set_weights(weights_dict)
-        if self.class_weights is not None:
-            self.criterion = nn.CrossEntropyLoss(
-                weight=self.class_weights, label_smoothing=0.1
-            )
-            print(f"Criterion updated with weights: {self.class_weights}")
-        else:
-            self.criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    # def set_weights(self, weights_dict):
+    #     super().set_weights(weights_dict)
+    #     if self.class_weights is not None:
+    #         self.criterion = nn.CrossEntropyLoss(
+    #             weight=self.class_weights, label_smoothing=0.1
+    #         )
+    #         print(f"Criterion updated with weights: {self.class_weights}")
+    #     else:
+    #         self.criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
 
     def prepare_batch(self, batch: dict):
         batch.update(
             {
                 "visual_attributes_targets": batch[
-                    "labels"
+                    "malignancy_targets"
                 ],  # Trick to use the same base trainer
             }
         )
-        return super().prepare_batch(self, batch=batch)
+        return super().prepare_batch(batch=batch)
 
     def compute_loss(self, outputs, batch_data):
-        labels = batch_data["malignancy_targets"]
-
-        if labels.ndim > 1 and labels.shape[1] == 1:
-            labels = labels.squeeze(1)
-        elif labels.ndim > 1:
-            raise ValueError(
-                f"Labels tensor has incorrect shape {labels.shape}. Expected (batch_size,)."
-            )
-
-        batch_data["malignancy_targets"] = labels
-
         return self.criterion(model_outputs=outputs, targets=batch_data)
 
     def unpack_model_outputs(self, outputs):
-        return {"logits": outputs["encodings"]}
+        return {"logits": outputs["malignancy_scores"]}
 
     def compute_custom_metrics(self, outputs, batch_data):
-        logits = self.unpack_model_outputs(outputs)["preds"]
-        labels = batch_data["labels"]
+        logits = self.unpack_model_outputs(outputs)["logits"]
+        labels = batch_data["malignancy_targets"]
 
         if labels.ndim > 1 and labels.shape[1] == 1:
             labels = labels.squeeze(1)

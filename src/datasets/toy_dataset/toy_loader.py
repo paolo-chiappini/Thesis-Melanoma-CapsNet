@@ -40,7 +40,7 @@ class ToyDataset(BaseDataset):
             "triangle",
             "ring",
             "stripe",
-            "None",
+            # "None",
         ]
         self.labels = self.data[self.label]
 
@@ -89,7 +89,9 @@ class ToyDataset(BaseDataset):
         )
 
         va_masks = self.load_va_masks(
-            os.path.normpath(os.path.join(self.root, "va_masks")), image_id, image.size
+            os.path.normpath(os.path.join(self.root, "va_masks")),
+            image_id.split("_")[1],
+            image.size,
         )
 
         if self.transform:
