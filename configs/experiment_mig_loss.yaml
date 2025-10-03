@@ -26,9 +26,12 @@ trainer:
     lr_decay: 0.96
     loss:
         components:
-            AttributeLoss:
+            MultiLabelCapsuleMarginLoss:
                 lambda: 1.0
-                params: {}
+                params:
+                    m_plus: 0.9
+                    m_minus: 0.1
+                    lambda_: 0.5
             MalignancyLoss:
                 lambda: 1.0
                 params: {}
@@ -67,7 +70,7 @@ metrics:
 system:
     seed: 123
     augment: True
-    save_name: bce_only_SQUASH
+    save_name: margin_loss_and_squash
     save_path: ./checkpoints/
     has_visual_attributes: True
 

@@ -1,6 +1,7 @@
 # credits: https://github.com/danielhavir/capsule-network
 
 from typing import List, Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -28,8 +29,8 @@ class MarginLoss(nn.Module):
 class AttributeLoss(nn.Module):
     def __init__(
         self,
-        loss_lambda: float=1.0,
-        attribute_weights: Optional[List[float]]=None,
+        loss_lambda: float = 1.0,
+        attribute_weights: Optional[List[float]] = None,
         loss_criterion=F.binary_cross_entropy_with_logits,
         **kwargs
     ):
@@ -43,7 +44,9 @@ class AttributeLoss(nn.Module):
                 attribute_weights, dtype=torch.float32
             )
 
-    def forward(self, attribute_scores: torch.Tensor, attribute_targets: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, attribute_scores: torch.Tensor, attribute_targets: torch.Tensor
+    ) -> torch.Tensor:
         """
         Compute the attribute loss.
 
@@ -69,8 +72,8 @@ class AttributeLoss(nn.Module):
 class MalignancyLoss(nn.Module):
     def __init__(
         self,
-        loss_lambda: float=1.0,
-        class_weights: Optional[List[float]]=None,
+        loss_lambda: float = 1.0,
+        class_weights: Optional[List[float]] = None,
         loss_criterion=F.binary_cross_entropy_with_logits,
         **kwargs
     ):
@@ -78,12 +81,14 @@ class MalignancyLoss(nn.Module):
         self.loss_lambda = loss_lambda
         self.loss_criterion = loss_criterion
 
-        if class_weights is not None: 
-            self.register_buffer('pos_weight', torch.tensor(class_weights))
-        else: 
+        if class_weights is not None:
+            self.register_buffer("pos_weight", torch.tensor(class_weights))
+        else:
             self.pos_weight = None
 
-    def forward(self, malignancy_scores: torch.Tensor, malignancy_targets: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, malignancy_scores: torch.Tensor, malignancy_targets: torch.Tensor
+    ) -> torch.Tensor:
         """
         Compute the malignancy loss.
 
@@ -97,3 +102,30 @@ class MalignancyLoss(nn.Module):
         return self.loss_lambda * self.loss_criterion(
             malignancy_scores, malignancy_targets, pos_weight=self.pos_weight
         )
+
+
+class MultiLabelCapsuleMarginLoss(nn.Module):
+    def __init__(
+        self,
+        m_plus: float = 0.9,
+        m_minus: float = 0.1,
+        lambda_: float = 0.5,
+        loss_lambda: float = 1.0,
+        **kwargs
+    ):
+        super().__init__()
+        self.m_plus = m_plus
+        self.m_minus = m_minus
+        self.lambda_ = lambda_
+        self.loss_lambda = loss_lambda
+
+    def forward(
+        self, attribute_poses: torch.Tensor, attribute_targets: torch.Tensor
+    ) -> torch.Tensor:
+        lengths = torch.norm(attribute_poses, dim=-1)
+
+        left = F.relu(self.m_plus - lengths) ** 2
+        right = F.relu(lengths - self.m_minus) ** 2
+        loss = attribute_targets * left + self.lambda_ * (1 - attribute_targets) * right
+
+        return self.loss_lambda * loss.mean()

@@ -45,8 +45,8 @@ class CombinedLoss(nn.Module):
                 loss_params = copy.deepcopy(cfg.get("params", {}))
                 loss_params["config"] = self.config
                 loss_params["device"] = device
-                loss_params['class_weights'] = class_weights
-                loss_params['attribute_weights'] = attribute_weights
+                loss_params["class_weights"] = class_weights
+                loss_params["attribute_weights"] = attribute_weights
 
                 self.loss_modules[loss_name] = loss_class(**loss_params)
                 self.loss_coefficients[loss_name] = cfg["lambda"]
@@ -74,6 +74,18 @@ class CombinedLoss(nn.Module):
                     malignancy_targets=F.one_hot(
                         targets.get("malignancy_targets").long(), num_classes=2
                     ).float(),
+                )
+            elif loss_name == "FocalLoss":
+                current_loss = loss_module(
+                    malignancy_scores=model_outputs.get("malignancy_scores"),
+                    malignancy_targets=F.one_hot(
+                        targets.get("malignancy_targets").long(), num_classes=2
+                    ).float(),
+                )
+            elif loss_name == "MultiLabelCapsuleMarginLoss":
+                current_loss = loss_module(
+                    attribute_poses=model_outputs.get("attribute_poses"),
+                    attribute_targets=targets.get("visual_attributes_targets"),
                 )
             elif loss_name == "TotalCorrelationLoss":
                 current_loss = loss_module(

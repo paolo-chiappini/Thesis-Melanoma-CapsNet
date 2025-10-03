@@ -1,3 +1,5 @@
+import torch
+
 from callbacks import CallbackManager, get_callbacks
 from losses import create_combined_loss
 from trainers import get_trainer
@@ -14,6 +16,7 @@ class TrainRunner(BaseRunner):
     def prepare(self):
         self.prepare_dataset(is_train=True)
         self.compute_weights()
+        self.update_sampler()
 
         self.build_model(load_weights=False)
         self.loss_criterion = create_combined_loss(
@@ -22,6 +25,25 @@ class TrainRunner(BaseRunner):
             attribute_weights=self.weights.get("attribute_weights"),
             device=self.device,
         )
+
+    def update_sampler(self):
+        class_weights = self.weights.get("class_weights", None)
+        if class_weights is not None:
+            original_dataset = self.loaders["train"].dataset
+
+            sampler = torch.utils.data.WeightedRandomSampler(
+                weights=class_weights,
+                num_samples=len(original_dataset),
+                replacement=True,
+            )
+
+            # recreate data loader with sampler
+            self.loaders["train"] = torch.utils.data.DataLoader(
+                dataset=original_dataset,
+                batch_size=self.loaders["train"].batch_size,
+                sampler=sampler,
+                num_workers=self.loaders["train"].num_workers,
+            )
 
     def execute(self):
         trainer = get_trainer(
