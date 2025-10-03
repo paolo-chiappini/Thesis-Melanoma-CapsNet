@@ -45,6 +45,8 @@ class CombinedLoss(nn.Module):
                 loss_params = copy.deepcopy(cfg.get("params", {}))
                 loss_params["config"] = self.config
                 loss_params["device"] = device
+                loss_params['class_weights'] = class_weights
+                loss_params['attribute_weights'] = attribute_weights
 
                 self.loss_modules[loss_name] = loss_class(**loss_params)
                 self.loss_coefficients[loss_name] = cfg["lambda"]

@@ -69,6 +69,7 @@ system:
     augment: True
     save_name: bce_only_SQUASH
     save_path: ./checkpoints/
+    has_visual_attributes: True
 
 perturbation:
     num_samples: 2

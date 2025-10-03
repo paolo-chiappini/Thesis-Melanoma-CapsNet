@@ -1,5 +1,6 @@
 # credits: https://github.com/danielhavir/capsule-network
 
+from typing import List, Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -27,9 +28,9 @@ class MarginLoss(nn.Module):
 class AttributeLoss(nn.Module):
     def __init__(
         self,
-        loss_lambda=1.0,
+        loss_lambda: float=1.0,
+        attribute_weights: Optional[List[float]]=None,
         loss_criterion=F.binary_cross_entropy_with_logits,
-        attribute_weights=None,
         **kwargs
     ):
         super(AttributeLoss, self).__init__()
@@ -42,16 +43,16 @@ class AttributeLoss(nn.Module):
                 attribute_weights, dtype=torch.float32
             )
 
-    def forward(self, attribute_scores, attribute_targets):
+    def forward(self, attribute_scores: torch.Tensor, attribute_targets: torch.Tensor) -> torch.Tensor:
         """
         Compute the attribute loss.
 
         Parameters:
-        - attribute_scores: Predicted attribute scores (batch_size, num_attributes)
-        - attribute_targets: Target attribute scores (batch_size, num_attributes)
+        - attribute_scores (torch.Tensor): Predicted attribute scores (batch_size, num_attributes)
+        - attribute_targets (torch.Tensor): Target attribute scores (batch_size, num_attributes)
 
         Returns:
-        - loss: Computed loss value
+        - loss (torch.Tensor): Computed loss value
         """
         device = attribute_scores.device
         attribute_targets = attribute_targets.to(device)
@@ -68,7 +69,8 @@ class AttributeLoss(nn.Module):
 class MalignancyLoss(nn.Module):
     def __init__(
         self,
-        loss_lambda=1.0,
+        loss_lambda: float=1.0,
+        class_weights: Optional[List[float]]=None,
         loss_criterion=F.binary_cross_entropy_with_logits,
         **kwargs
     ):
@@ -76,17 +78,22 @@ class MalignancyLoss(nn.Module):
         self.loss_lambda = loss_lambda
         self.loss_criterion = loss_criterion
 
-    def forward(self, malignancy_scores, malignancy_targets):
+        if class_weights is not None: 
+            self.register_buffer('pos_weight', torch.tensor(class_weights))
+        else: 
+            self.pos_weight = None
+
+    def forward(self, malignancy_scores: torch.Tensor, malignancy_targets: torch.Tensor) -> torch.Tensor:
         """
         Compute the malignancy loss.
 
         Parameters:
-        - malignancy_scores: Predicted malignancy scores (batch_size, num_malignancies)
-        - malignancy_targets: Target malignancy scores (batch_size, num_malignancies)
+        - malignancy_scores (torch.Tensor): Predicted malignancy scores (batch_size, num_malignancies)
+        - malignancy_targets (torch.Tensor): Target malignancy scores (batch_size, num_malignancies)
 
         Returns:
-        - loss: Computed loss value
+        - loss (torch.Tensor): Computed loss value
         """
         return self.loss_lambda * self.loss_criterion(
-            malignancy_scores, malignancy_targets
+            malignancy_scores, malignancy_targets, pos_weight=self.pos_weight
         )
