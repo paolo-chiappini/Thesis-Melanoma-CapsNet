@@ -82,6 +82,11 @@ class CombinedLoss(nn.Module):
                         targets.get("malignancy_targets").long(), num_classes=2
                     ).float(),
                 )
+            elif loss_name == "MultiLabelLogitMarginLoss":
+                current_loss = loss_module(
+                    attribute_logits=model_outputs.get("attribute_logits"),
+                    attribute_targets=targets.get("visual_attributes_targets"),
+                )
             elif loss_name == "MultiLabelCapsuleMarginLoss":
                 current_loss = loss_module(
                     attribute_poses=model_outputs.get("attribute_poses"),
@@ -117,6 +122,11 @@ class CombinedLoss(nn.Module):
                         masks=targets["va_masks"][:, k, :, :],
                     )
             elif loss_name == "MIGLoss":
+                current_loss = loss_module(
+                    attribute_poses=model_outputs.get("attribute_poses"),
+                    va_labels=targets.get("visual_attributes_targets"),
+                )
+            elif loss_name == "ContrastivePoseLoss":
                 current_loss = loss_module(
                     attribute_poses=model_outputs.get("attribute_poses"),
                     va_labels=targets.get("visual_attributes_targets"),

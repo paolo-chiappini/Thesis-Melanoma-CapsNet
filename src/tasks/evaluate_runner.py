@@ -1,5 +1,5 @@
 import math
-from typing import List
+from typing import List, Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,6 +7,8 @@ import pandas as pd
 import scienceplots  # noqa: F401
 import seaborn as sns
 import torch
+import umap
+from sklearn.manifold import TSNE
 from sklearn.metrics import classification_report, confusion_matrix
 from tqdm import tqdm
 
@@ -467,6 +469,170 @@ def plot_logit_distributions(
     return fig
 
 
+def _plot_embedding_on_ax(ax, projected_embeddings, labels, title):
+    """Helper function to create a styled scatter plot on a given Axes object."""
+    df = pd.DataFrame(
+        {
+            "x": projected_embeddings[:, 0],
+            "y": projected_embeddings[:, 1],
+            "label": ["Present (GT=1)" if l == 1 else "Absent (GT=0)" for l in labels],
+        }
+    )
+
+    palette = {"Absent (GT=0)": "cornflowerblue", "Present (GT=1)": "tomato"}
+
+    sns.scatterplot(
+        data=df,
+        x="x",
+        y="y",
+        hue="label",
+        palette=palette,
+        ax=ax,
+        alpha=0.7,
+        s=20,  # Adjust point size
+    )
+    ax.set_title(title)
+    ax.set_xlabel("Dimension 1")
+    ax.set_ylabel("Dimension 2")
+    ax.legend(loc="best", fontsize="small")
+    ax.grid(alpha=0.3)
+
+
+def generate_embedding_visualizations(
+    attribute_poses: np.ndarray,
+    va_labels: np.ndarray,
+    attribute_names: List[str],
+    method: Literal["umap", "tsne"] = "umap",
+) -> plt.Figure:
+    """
+    Generates a faceted plot of 2D embeddings for each attribute's poses,
+    colored by ground-truth labels.
+
+    Args:
+        attribute_poses (np.ndarray): High-dimensional poses (N, K, pose_dim).
+        va_labels (np.ndarray): Ground truth labels (N, K).
+        attribute_names (List[str]): List of attribute names for subplot titles.
+        method (str): The reduction method to use, 'umap' or 'tsne'.
+
+    Returns:
+        plt.Figure: A matplotlib Figure containing the faceted plot.
+    """
+    if method == "umap" and umap is None:
+        print("UMAP not found, switching to t-SNE.")
+        method = "tsne"
+
+    num_attributes = len(attribute_names)
+    ncols = math.ceil(math.sqrt(num_attributes))
+    nrows = math.ceil(num_attributes / ncols)
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 5))
+    axes = axes.flatten()
+
+    print(f"Generating {method.upper()} plots for {num_attributes} attributes...")
+    for k, name in enumerate(attribute_names):
+        ax = axes[k]
+        poses_k = attribute_poses[:, k, :]
+        labels_k = va_labels[:, k]
+
+        if method == "umap":
+            reducer = umap.UMAP(
+                n_components=2, random_state=42, n_neighbors=15, min_dist=0.1
+            )
+        else:
+            reducer = TSNE(n_components=2, random_state=42, perplexity=30, n_iter=300)
+
+        projected_embeddings = reducer.fit_transform(poses_k)
+
+        _plot_embedding_on_ax(ax, projected_embeddings, labels_k, name)
+
+    for j in range(num_attributes, len(axes)):
+        axes[j].set_visible(False)
+
+    fig.suptitle(
+        f"{method.upper()} Visualization of Pose Embeddings per Attribute",
+        fontsize=16,
+        y=1.02,
+    )
+    fig.tight_layout()
+
+    return fig
+
+
+def plot_pose_centroids(
+    attribute_poses: np.ndarray,
+    va_labels: np.ndarray,
+    attribute_names: List[str],
+    method: Literal["umap", "tsne"] = "umap",
+) -> plt.Figure:
+    """
+    Visualizes the mean centroids of 'Present' vs 'Absent' poses for all
+    attributes in a single, shared embedding space.
+    """
+    N, K, P = attribute_poses.shape
+
+    all_poses_flat = attribute_poses.reshape(N * K, P)
+
+    if method == "umap" and umap:
+        reducer = umap.UMAP(n_components=2, random_state=42)
+    else:
+        reducer = TSNE(n_components=2, random_state=42)
+
+    projected_flat = reducer.fit_transform(all_poses_flat)
+    projected_poses = projected_flat.reshape(N, K, 2)
+
+    centroids = []
+    for k, name in enumerate(attribute_names):
+        poses_k_2d = projected_poses[:, k, :]
+        labels_k = va_labels[:, k]
+
+        absent_centroid = poses_k_2d[labels_k == 0].mean(axis=0)
+        present_centroid = poses_k_2d[labels_k == 1].mean(axis=0)
+
+        centroids.append(
+            {
+                "attribute": name,
+                "label": "Absent (GT=0)",
+                "x": absent_centroid[0],
+                "y": absent_centroid[1],
+            }
+        )
+        centroids.append(
+            {
+                "attribute": name,
+                "label": "Present (GT=1)",
+                "x": present_centroid[0],
+                "y": present_centroid[1],
+            }
+        )
+
+    centroid_df = pd.DataFrame(centroids)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    palette = {"Absent (GT=0)": "blue", "Present (GT=1)": "red"}
+
+    sns.scatterplot(
+        data=centroid_df,
+        x="x",
+        y="y",
+        style="label",
+        hue="label",
+        palette=palette,
+        s=100,
+        ax=ax,
+    )
+
+    for i, row in centroid_df.iterrows():
+        ax.text(row["x"] + 0.05, row["y"], row["attribute"], fontsize=9)
+
+    ax.set_title(f"{method.upper()} of Pose Centroids", fontsize=16)
+    ax.set_xlabel("Dimension 1")
+    ax.set_ylabel("Dimension 2")
+    ax.legend(title="Class Centroid")
+    ax.grid(alpha=0.4)
+    fig.tight_layout()
+    return fig
+
+
 class EvaluateRunner(BaseRunner):
     def prepare(self):
         self.prepare_dataset(is_train=False)
@@ -653,4 +819,23 @@ class EvaluateRunner(BaseRunner):
         print(f"Saved PRC at {pr_save_path}")
 
         print(f"AUC Scores: {auc_scores}")
-        # TODO: continue here
+
+        print("\nGenerating embedding visualizations...")
+
+        umap_faceted_fig = generate_embedding_visualizations(
+            attribute_poses=attribute_poses,
+            va_labels=attributes_gt,
+            attribute_names=attribute_names,
+            method="umap",
+        )
+        umap_faceted_fig.savefig("figures/umap_faceted_embeddings.pdf", dpi=300)
+        print("Saved faceted UMAP plot to figures/umap_faceted_embeddings.pdf")
+
+        centroid_fig = plot_pose_centroids(
+            attribute_poses=attribute_poses,
+            va_labels=attributes_gt,
+            attribute_names=attribute_names,
+            method="umap",
+        )
+        centroid_fig.savefig("figures/umap_pose_centroids.pdf", dpi=300)
+        print("Saved UMAP centroid plot to figures/umap_pose_centroids.pdf")

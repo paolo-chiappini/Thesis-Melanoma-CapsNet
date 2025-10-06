@@ -3,7 +3,7 @@ dataset:
     root: ./data/EXHAMDataset
     metadata_path: null
     image_extension: null
-    batch_size: 24
+    batch_size: 8
     val_size: 0.1
     test_size: 0.1
 
@@ -18,6 +18,9 @@ model:
     num_classes: 2
     routing_steps: 3
     routing_algorithm: sparsemax
+    pretrained_encoder_path: checkpoints/new_best_in_town/best_finetune_model.pth
+    load_pretrained: True
+    freeze_encoder: True
 
 trainer:
     name: CapsNetTrainerMPL
@@ -26,12 +29,19 @@ trainer:
     lr_decay: 0.96
     loss:
         components:
-            MultiLabelCapsuleMarginLoss:
+            # MultiLabelCapsuleMarginLoss:
+            #     lambda: 10.0
+            #     params:
+            #         m_plus: 0.9
+            #         m_minus: 0.1
+            #         lambda_: 1.0
+            # MultiLabelLogitMarginLoss:
+            #     lambda: 1.0
+            #     params:
+            #         margin: 0.5
+            AttributeLoss:
                 lambda: 1.0
-                params:
-                    m_plus: 0.9
-                    m_minus: 0.1
-                    lambda_: 0.5
+                params: {}
             MalignancyLoss:
                 lambda: 1.0
                 params: {}
@@ -42,20 +52,24 @@ trainer:
                     beta: 1.0
                     lambda_bg_global: 1.0
                     lambda_bg_local: 0.1
-            MIGLoss:
-                lambda: 10.0
+            # MIGLoss:
+            #     lambda: 10.0
+            #     params:
+            #         pose_dim: 16
+            #         num_attributes: 5
+            #         lambda_align: 1.0
+            #         lambda_disentangle: 0.1
+            ContrastivePoseLoss:
+                lambda: 1.0
                 params:
-                    pose_dim: 16
-                    num_attributes: 5
-                    lambda_align: 1.0
-                    lambda_disentangle: 0.1
+                    temperature: 0.1
 
 callbacks:
     - name: PlotCallback
     - name: ReconstructionCallback
       frequency: 5
     - name: EarlyStoppingCallback
-      patience: 20
+      patience: 10
       min_delta: 0.03
       restore_best_weights: True
 
@@ -70,7 +84,7 @@ metrics:
 system:
     seed: 123
     augment: True
-    save_name: margin_loss_and_squash
+    save_name: pretrained_infonce
     save_path: ./checkpoints/
     has_visual_attributes: True
 

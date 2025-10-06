@@ -16,7 +16,7 @@ class TrainRunner(BaseRunner):
     def prepare(self):
         self.prepare_dataset(is_train=True)
         self.compute_weights()
-        self.update_sampler()
+        # self.update_sampler() # Damages training beyond measure
 
         self.build_model(load_weights=False)
         self.loss_criterion = create_combined_loss(
@@ -26,6 +26,7 @@ class TrainRunner(BaseRunner):
             device=self.device,
         )
 
+    # TODO: remove or fix
     def update_sampler(self):
         class_weights = self.weights.get("class_weights", None)
         if class_weights is not None:

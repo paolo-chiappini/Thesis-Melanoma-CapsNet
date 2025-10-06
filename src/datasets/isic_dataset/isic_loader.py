@@ -47,7 +47,7 @@ class ISICDataset(BaseDataset):
             image_extension=image_extension,
         )
 
-        self.labels = self.data[self.label]
+        self.labels = self.data[self.label].map({"benign": 0, "malignant": 1})
         self.groups = self.data["patient_id"].values
 
         print("[ISIC 2020] Loaded dataset with", len(self.data), "rows")

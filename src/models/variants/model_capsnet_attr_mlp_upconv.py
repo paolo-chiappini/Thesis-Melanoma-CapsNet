@@ -3,13 +3,13 @@ import torch.nn as nn
 
 from layers import (
     AttributesPredictor,
-    Conv2d_BN,
     ConvDecoder,
     MalignancyPredictor,
     PrimaryCapsules,
     RoutingCapsules,
 )
-from utils.layer_output_shape import get_network_output_shape
+from layers.conv_batch_norm import Conv2d_BN
+from models.model_resnet_classifier import ResnetClassifier
 
 
 class CapsNetWithAttributesMLPUpconv(nn.Module):
@@ -23,6 +23,9 @@ class CapsNetWithAttributesMLPUpconv(nn.Module):
         pose_dim,
         routing_steps,
         device: torch.device,
+        pretrained_encoder_path,
+        load_pretrained=False,
+        freeze_encoder=True,
         kernel_size=3,
         routing_algorithm="sigmoid",
     ):
@@ -43,25 +46,32 @@ class CapsNetWithAttributesMLPUpconv(nn.Module):
             Conv2d_BN(192, caps_channels, kernel_size, padding=1),
             nn.MaxPool2d(kernel_size=kernel_size, stride=2),
         ]
-        self.encoder = nn.Sequential(*encoder_layers)
 
-        # Capsules
-        primary_caps_input_shape = get_network_output_shape(
-            (1, *img_shape), encoder_layers
-        )
+        if load_pretrained:
+            self.encoder = self._load_truncated_pretrained_encoder(
+                pretrained_encoder_path, freeze_encoder
+            )
+            encoder_output_channels = 128
+        else:
+            self.encoder = nn.Sequential(*encoder_layers)
+            encoder_output_channels = 256
+
+        # The truncated encoder will output a feature map with 128 channels
+        # and a spatial size of 32x32 for a 256x256 input
+
         self.primary_capsules = PrimaryCapsules(
-            primary_caps_input_shape[1],
-            caps_channels,
-            primary_dim,
+            input_channels=encoder_output_channels,
+            output_channels=caps_channels,
+            capsule_dimension=primary_dim,
             kernel_size=9,
             stride=2,
             padding="valid",
         )
 
-        primary_caps_output_shape = get_network_output_shape(
-            (1, *img_shape), [*encoder_layers, self.primary_capsules], print_all=True
-        )
-        primary_caps_count = primary_caps_output_shape[1]
+        # For a 32x32 input, this layer will produce an output of shape:
+        # H_out = floor((32 - 9)/2 + 1) = 12.
+        # Total capsules = 32 * 12 * 12 = 4608
+        primary_caps_count = 32 * 12 * 12
 
         output_dim = pose_dim
 
@@ -111,18 +121,29 @@ class CapsNetWithAttributesMLPUpconv(nn.Module):
 
         self.attributes_classifier = AttributesPredictor(capsule_pose_dim=pose_dim)
 
-        attr_caps_output_dim = get_network_output_shape(
-            primary_caps_output_shape,
-            [self.attribute_capsules],
-            print_all=True,
-        )
+    def _load_truncated_pretrained_encoder(
+        self, checkpoint_path: str, freeze: bool
+    ) -> nn.Module:
+        print(f"Loading pre-trained encoder from: {checkpoint_path}")
 
-        attr_caps_output_dim = list(attr_caps_output_dim)
-        _ = get_network_output_shape(
-            attr_caps_output_dim,
-            [self.decoder],
-            print_all=True,
-        )
+        full_trained_model = ResnetClassifier()
+
+        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+
+        full_trained_model.load_state_dict(checkpoint)
+        print("Successfully loaded weights")
+
+        children = list(full_trained_model.backbone.children())
+        truncated_backbone = nn.Sequential(*children[:6])
+
+        if freeze:
+            print("Freezing encoder weights.")
+            for param in truncated_backbone.parameters():
+                param.requires_grad = False
+        else:
+            print("Encoder weights are NOT frozen. Fine-tuning enabled.")
+
+        return truncated_backbone
 
     def encode(self, x):
         """
@@ -136,6 +157,10 @@ class CapsNetWithAttributesMLPUpconv(nn.Module):
         encoded_features = self.encoder(x)
         primary_caps_output = self.primary_capsules(encoded_features)
         attr_caps_output = self.attribute_capsules(primary_caps_output)
+
+        # squash the output
+        # attr_caps_output = squash(attr_caps_output)
+
         return attr_caps_output
 
     def decode(self, attribute_poses, y_mask=None):
