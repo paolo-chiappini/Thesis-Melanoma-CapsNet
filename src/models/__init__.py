@@ -11,6 +11,7 @@ from .model_conv_attributes_32 import CapsuleNetworkWithAttributes32
 from .model_pretrained import ModelPretrainedCapsnet
 from .model_resnet_classifier import ResnetClassifier
 from .model_sanity_check import SanityCheckModel
+from .variants.model_capsnet_attr_logit_upconv import LogitCapsnet
 from .variants.model_capsnet_attr_mlp import CapsNetWithAttributesMLP
 from .variants.model_capsnet_attr_mlp_pre import CapsNetWithAttributesMLP_Pre
 from .variants.model_capsnet_attr_mlp_upconv import CapsNetWithAttributesMLPUpconv

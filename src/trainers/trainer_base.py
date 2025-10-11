@@ -184,7 +184,9 @@ class BaseTrainer(ABC):
             batch_data = self.prepare_batch(batch)
             self.optimizer.zero_grad()
 
-            outputs = self.model(batch_data["images"])
+            outputs = self.model(
+                batch_data["images"], batch_data["visual_attributes_targets"]
+            )
             losses = self.compute_loss(outputs, batch_data)
             losses = losses if isinstance(losses, dict) else {"loss": losses}
             total_loss = sum(losses.values())
@@ -267,7 +269,8 @@ class BaseTrainer(ABC):
 
                 batch_data = self.prepare_batch(batch)
                 images = batch_data["images"]
-                outputs = self.model(images)
+                va_targets = batch_data["visual_attributes_targets"]
+                outputs = self.model(images, va_targets)
                 outputs_dict = self.unpack_model_outputs(outputs)
                 losses = self.compute_loss(outputs, batch_data)
                 losses = losses if isinstance(losses, dict) else {"loss": losses}

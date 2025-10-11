@@ -106,5 +106,5 @@ class RoutingCapsules(nn.Module):
         s = (c * u_hat).sum(dim=2)
         v = squash(s)
 
-        return s  # We return the unsquashed vector to avoid problems with logits
+        return s, c  # We return the unsquashed vector to avoid problems with logits
         # return squash(s)

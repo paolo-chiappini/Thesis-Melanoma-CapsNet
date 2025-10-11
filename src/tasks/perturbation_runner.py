@@ -40,16 +40,16 @@ class PerturbationRunner(BaseRunner):
 
         with tqdm(total=len(loader), desc="Collecting samples") as pbar:
             for batch in loader:
-                images, labels = batch[0], batch[1]
+                images, labels = batch["images"], batch["malignancy_targets"]
                 for img, label in zip(images, labels):
                     label = label.item()
                     if len(class_images[label]) < num_samples:
                         class_images[label].append(img)
 
-                if all((len(class_images[l]) >= num_samples for l in classes)):
+                if all((len(class_images[cl]) >= num_samples for cl in classes)):
                     break
 
-                print([len(class_images[l]) for l in class_images])
+                print([len(class_images[cl]) for cl in class_images])
                 pbar.update(1)
 
         print("Finished collecting samples")

@@ -6,6 +6,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from utils.functional.helpers import get_primary_caps_coords
+
 
 class MarginLoss(nn.Module):
     def __init__(self, size_average=False, loss_lambda=0.5, **kwargs):
@@ -26,39 +28,79 @@ class MarginLoss(nn.Module):
         return L_k.mean() if self.size_average else L_k.sum()
 
 
+def focal_loss_with_logits(
+    inputs: torch.Tensor,
+    targets: torch.Tensor,
+    gamma: float = 2.0,
+    alpha: Optional[float] = 0.25,
+    pos_weight: Optional[torch.Tensor] = None,
+) -> torch.Tensor:
+    """
+    Computes Focal Loss for binary classification targets with logits input.
+
+    Args:
+        inputs (torch.Tensor): Raw logits (scores) from the model.
+        targets (torch.Tensor): Ground truth labels (0 or 1).
+        gamma (float): Focusing parameter. Higher gamma reduces the loss contribution
+                       from easy-to-classify examples.
+        alpha (float): Weighting factor for the positive class (often 0.25).
+                       Use pos_weight for per-instance/class weighting instead if available.
+        pos_weight (torch.Tensor, optional): Weight for positive examples, as in BCE.
+                                            If provided, it overrides alpha's role in positive weighting.
+
+    Returns:
+        torch.Tensor: The computed focal loss.
+    """
+    BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
+
+    pt = torch.exp(-BCE_loss)
+
+    focus_term = (1 - pt) ** gamma
+
+    if pos_weight is not None:
+        weighting_term = targets * pos_weight.to(inputs.device) + (1 - targets) * 1.0
+    elif alpha is not None:
+        alpha = torch.tensor(alpha).to(inputs.device)
+        weighting_term = targets * alpha + (1 - targets) * (1 - alpha)
+    else:
+        weighting_term = 1.0
+
+    loss = weighting_term * focus_term * BCE_loss
+
+    return loss.mean()
+
+
 class AttributeLoss(nn.Module):
     def __init__(
         self,
-        loss_lambda: float = 1.0,
-        attribute_weights: Optional[List[float]] = None,
-        loss_criterion=F.binary_cross_entropy_with_logits,
+        attribute_weights: Optional[
+            List[float]
+        ] = None,  # Pos_weight for each attribute
         **kwargs
     ):
         super(AttributeLoss, self).__init__()
-        self.loss_lambda = loss_lambda
-        self.loss_criterion = loss_criterion
-        self.attribute_weights = None
+
+        self.loss_criterion = F.binary_cross_entropy_with_logits
 
         if attribute_weights is not None:
-            self.attribute_weights = torch.tensor(
-                attribute_weights, dtype=torch.float32
+            self.register_buffer(
+                "attribute_weights",
+                torch.tensor(attribute_weights, dtype=torch.float32),
             )
+        else:
+            self.attribute_weights = None
 
     def forward(
         self, attribute_scores: torch.Tensor, attribute_targets: torch.Tensor
     ) -> torch.Tensor:
         """
-        Compute the attribute loss.
+        Compute the attribute loss using Multi-label Soft Margin (BCE with Logits).
 
         Parameters:
-        - attribute_scores (torch.Tensor): Predicted attribute scores (batch_size, num_attributes)
-        - attribute_targets (torch.Tensor): Target attribute scores (batch_size, num_attributes)
-
-        Returns:
-        - loss (torch.Tensor): Computed loss value
+        - attribute_scores (torch.Tensor): Predicted logits (B, N_attributes)
+        - attribute_targets (torch.Tensor): Target labels (B, N_attributes)
         """
-        device = attribute_scores.device
-        attribute_targets = attribute_targets.to(device)
+        attribute_targets = attribute_targets.float()
 
         loss = self.loss_criterion(
             attribute_scores,
@@ -66,23 +108,26 @@ class AttributeLoss(nn.Module):
             pos_weight=self.attribute_weights,
         )
 
-        return self.loss_lambda * loss
+        return loss
 
 
 class MalignancyLoss(nn.Module):
     def __init__(
         self,
-        loss_lambda: float = 1.0,
-        class_weights: Optional[List[float]] = None,
-        loss_criterion=F.binary_cross_entropy_with_logits,
+        class_weights: Optional[List[float]] = None,  # Used as pos_weight in Focal Loss
+        focal_gamma: float = 2.0,
+        focal_alpha: Optional[float] = 0.25,
         **kwargs
     ):
         super(MalignancyLoss, self).__init__()
-        self.loss_lambda = loss_lambda
-        self.loss_criterion = loss_criterion
+        self.focal_gamma = focal_gamma
+        self.focal_alpha = focal_alpha
 
         if class_weights is not None:
-            self.register_buffer("pos_weight", torch.tensor(class_weights))
+            # class_weights should be [pos_weight] for the positive (malignant) class
+            self.register_buffer(
+                "pos_weight", torch.tensor(class_weights, dtype=torch.float32)
+            )
         else:
             self.pos_weight = None
 
@@ -90,81 +135,27 @@ class MalignancyLoss(nn.Module):
         self, malignancy_scores: torch.Tensor, malignancy_targets: torch.Tensor
     ) -> torch.Tensor:
         """
-        Compute the malignancy loss.
+        Compute the malignancy loss using Focal Loss.
 
         Parameters:
-        - malignancy_scores (torch.Tensor): Predicted malignancy scores (batch_size, num_malignancies)
-        - malignancy_targets (torch.Tensor): Target malignancy scores (batch_size, num_malignancies)
-
-        Returns:
-        - loss (torch.Tensor): Computed loss value
+        - malignancy_scores (torch.Tensor): Predicted malignancy scores (batch_size, 1)
+        - malignancy_targets (torch.Tensor): Target malignancy scores (batch_size, 1)
         """
-        return self.loss_lambda * self.loss_criterion(
-            malignancy_scores, malignancy_targets, pos_weight=self.pos_weight
+        malignancy_targets = malignancy_targets.float()
+
+        loss = focal_loss_with_logits(
+            inputs=malignancy_scores,
+            targets=malignancy_targets,
+            gamma=self.focal_gamma,
+            alpha=self.focal_alpha,
+            pos_weight=self.pos_weight,
         )
 
-
-class MultiLabelCapsuleMarginLoss(nn.Module):
-    def __init__(
-        self,
-        m_plus: float = 0.9,
-        m_minus: float = 0.1,
-        lambda_: float = 0.5,
-        loss_lambda: float = 1.0,
-        **kwargs
-    ):
-        super().__init__()
-        self.m_plus = m_plus
-        self.m_minus = m_minus
-        self.lambda_ = lambda_
-        self.loss_lambda = loss_lambda
-
-    def forward(
-        self, attribute_poses: torch.Tensor, attribute_targets: torch.Tensor
-    ) -> torch.Tensor:
-        lengths = torch.norm(attribute_poses, dim=-1)
-
-        left = F.relu(self.m_plus - lengths) ** 2
-        right = F.relu(lengths - self.m_minus) ** 2
-        loss = attribute_targets * left + self.lambda_ * (1 - attribute_targets) * right
-
-        return self.loss_lambda * loss.mean()
-
-
-class MultiLabelLogitMarginLoss(nn.Module):
-    def __init__(
-        self, margin: float = 1.0, loss_lambda: float = 1.0, base_loss=None, **kwargs
-    ):
-        super().__init__()
-        self.margin = margin
-        self.base_loss = base_loss or nn.BCEWithLogitsLoss()
-        self.loss_lambda = loss_lambda
-
-    def forward(
-        self, attribute_logits: torch.Tensor, attribute_targets: torch.Tensor
-    ) -> torch.Tensor:
-        base = self.base_loss(attribute_logits, attribute_targets)
-
-        pos_mask = attribute_targets == 1
-        neg_mask = attribute_targets == 0
-
-        pos_penalty = (
-            F.relu(self.margin - attribute_logits[pos_mask]).mean()
-            if pos_mask.any()
-            else 0
-        )
-        neg_penalty = (
-            F.relu(self.margin + attribute_logits[neg_mask]).mean()
-            if neg_mask.any()
-            else 0
-        )
-
-        margin_loss = pos_penalty + neg_penalty
-        return (base + margin_loss) * self.loss_lambda
+        return loss
 
 
 class ContrastivePoseLoss(nn.Module):
-    def __init__(self, temperature: float = 0.1, loss_lambda: float = 1.0, **kwargs):
+    def __init__(self, temperature: float = 0.1, **kwargs):
         """
         An InfoNCE-based contrastive loss to enforce separation between capsule poses
         for present (positive) and absent (negative) attributes.
@@ -175,7 +166,6 @@ class ContrastivePoseLoss(nn.Module):
         """
         super(ContrastivePoseLoss, self).__init__()
         self.temperature = temperature
-        self.lambda_contrastive = loss_lambda
         self.cosine_similarity = nn.CosineSimilarity(dim=-1)
 
     def forward(
@@ -242,4 +232,89 @@ class ContrastivePoseLoss(nn.Module):
 
         loss = loss_per_anchor.mean()
 
-        return self.lambda_contrastive * loss
+        return loss
+
+
+class DisentanglementLoss(nn.Module):
+    def __init__(self, **kwargs):
+        super(DisentanglementLoss, self).__init__()
+
+    def forward(self, attribute_poses: torch.Tensor) -> torch.Tensor:
+        B, K, pose_dim = attribute_poses.shape
+
+        # mean-center for correlation computation
+        mean_poses = torch.mean(attribute_poses, dim=[0, 2], keepdim=True)
+        centered_poses = attribute_poses - mean_poses
+
+        reshaped_poses = centered_poses.permute(0, 2, 1).reshape(B * pose_dim, K)
+
+        C = torch.matmul(reshaped_poses.T, reshaped_poses) / (B * pose_dim - 1)
+
+        diag_mask = torch.eye(K, device=C.device).bool()
+
+        penalty = torch.sum(C[~diag_mask] ** 2)
+
+        return penalty
+
+
+class MaskAlignmentLoss(nn.Module):
+
+    def __init__(self, **kwargs):
+        super(MaskAlignmentLoss, self).__init__()
+
+    def forward(
+        self, predicted_masks: torch.Tensor, gt_masks: torch.Tensor
+    ) -> torch.Tensor:
+        pred_flat = predicted_masks.view(-1)
+        gt_flat = gt_masks.view(-1)
+
+        intersection = (pred_flat * gt_flat).sum()
+
+        areas_sum = pred_flat.sum() + gt_flat.sum()
+
+        smooth = 1e-6
+        dice_coefficient = (2.0 * intersection + smooth) / (areas_sum + smooth)
+
+        dice_loss = 1 - dice_coefficient
+
+        return dice_loss
+
+
+class RoutingAgreementLoss(nn.Module):
+    def __init__(self, img_size: int = 256, **kwargs):
+        super(RoutingAgreementLoss, self).__init__()
+        self.img_size = img_size
+
+        self.register_buffer("primary_coords", get_primary_caps_coords(img_size))
+
+    def forward(
+        self, coupling_coefficients: torch.Tensor, gt_masks: torch.Tensor
+    ) -> torch.Tensor:
+        B, num_primary, num_attribute = coupling_coefficients.shape
+        H, W = gt_masks.shape[2:]
+        device = coupling_coefficients.device
+
+        if H != self.img_size or W != self.img_size:
+            raise ValueError("Mask size must match the input image size.")
+
+        y_grid, x_grid = torch.meshgrid(
+            torch.arange(H, device=device),
+            torch.arange(W, device=device),
+            indexing="ij",
+        )
+
+        primary_coords_int = (
+            self.primary_coords.round().long().clamp(0, H - 1).to(device=device)
+        )
+
+        mask_value_at_primary_caps_center = gt_masks[
+            :, :, primary_coords_int[:, 1], primary_coords_int[:, 0]
+        ].permute(
+            0, 2, 1
+        )  # (B, num_primary, num_attribut)
+
+        outside_mask_penalty_map = 1.0 - mask_value_at_primary_caps_center.float()
+
+        loss_agreement = (coupling_coefficients * outside_mask_penalty_map).mean()
+
+        return loss_agreement

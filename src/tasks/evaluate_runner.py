@@ -23,8 +23,6 @@ from metrics.pairwise_mutual_information import (
 
 from .base_runner import BaseRunner
 
-plt.style.use("science")
-
 
 def calculate_all_metrics(
     attribute_poses: np.ndarray,
@@ -633,6 +631,99 @@ def plot_pose_centroids(
     return fig
 
 
+def generate_routing_visualization(
+    model,
+    dataloader,
+    image_indices,
+    attribute_names,
+    device,
+    save_path="routing_analysis.pdf",
+):
+    """
+    Generates and saves the "Routing Adjacency Matrix" visualization for
+    specified images.
+
+    Args:
+        model (nn.Module): Your trained Capsule Network model.
+        dataloader (DataLoader): The dataloader for the validation or test set.
+        image_indices (list[int]): A list of integer indices of the images to visualize.
+        attribute_names (list[str]): A list of names for the attribute capsules (Y-axis labels).
+        device (torch.device): The device to run the model on.
+        save_path (str): Path to save the output PDF file.
+    """
+    model.to(device)
+    model.eval()
+
+    num_images = len(image_indices)
+    fig, axes = plt.subplots(
+        num_images,
+        2,
+        figsize=(15, 5 * num_images),
+        gridspec_kw={"width_ratios": [1, 3]},  # Make the heatmap wider
+    )
+    fig.suptitle("Analysis of Routing Adjacency Matrices", fontsize=20, y=1.02)
+
+    dataset = dataloader.dataset
+
+    with torch.no_grad():
+        for i, img_idx in enumerate(image_indices):
+            # 1. Get the specific image and label from the dataset
+            data = dataset[img_idx]
+            image = data["images"]
+            label = data["visual_attributes_targets"]
+            image = image.unsqueeze(0).to(
+                device
+            )  # Add batch dimension and move to device
+            label = label.unsqueeze(0)
+
+            # 2. Perform a forward pass
+            outputs = model(image)  # y_labels=None for eval mode
+
+            # 3. Extract the coupling coefficients
+            # Shape: (1, K, P, 1) -> squeeze to (K, P)
+            coupling_coeffs = outputs["coupling_coefficients"].squeeze().cpu().numpy()
+
+            # --- Plotting ---
+
+            # Get the original image for display (un-normalize if necessary)
+            # This depends on your dataset implementation. We'll just show the tensor.
+            img_to_show = image.squeeze(0).cpu().permute(1, 2, 0).numpy()
+            # If normalized, you'd un-normalize here for correct colors
+            # img_to_show = img_to_show * std + mean
+
+            ax_img = axes[i, 0]
+            ax_heatmap = axes[i, 1]
+
+            # Plot the original image
+            ax_img.imshow(np.clip(img_to_show, 0, 1))
+            ax_img.axis("off")
+
+            # Find which attributes are present
+            present_attrs_indices = torch.where(label.squeeze() == 1)[0].tolist()
+            present_attrs_names = [attribute_names[j] for j in present_attrs_indices]
+            title_text = f"Image #{img_idx}\nGround Truth: {', '.join(present_attrs_names) or 'None'}"
+            ax_img.set_title(title_text, fontsize=12)
+
+            # Plot the heatmap
+            sns.heatmap(
+                coupling_coeffs,
+                ax=ax_heatmap,
+                cmap="viridis",
+                cbar=True,
+                cbar_kws={"label": "Coupling Coefficient Value"},
+            )
+            ax_heatmap.set_title("Routing Adjacency Matrix", fontsize=12)
+            ax_heatmap.set_ylabel("Attribute Capsule Index")
+            ax_heatmap.set_yticks(np.arange(len(attribute_names)) + 0.5)
+            ax_heatmap.set_yticklabels(attribute_names, rotation=0)
+            ax_heatmap.set_xlabel("Primary Capsule Index")
+
+    plt.tight_layout(rect=[0, 0, 1, 1])
+    print(f"Saving visualization to {save_path}...")
+    plt.savefig(save_path, bbox_inches="tight")
+    plt.close()
+
+
 class EvaluateRunner(BaseRunner):
     def prepare(self):
         self.prepare_dataset(is_train=False)
@@ -646,6 +737,16 @@ class EvaluateRunner(BaseRunner):
         self.model.eval()
 
         attribute_names = self.loaders["val"].dataset.dataset.visual_attributes
+
+        generate_routing_visualization(
+            model=self.model,
+            dataloader=self.loaders["val"],
+            image_indices=[0, 1, 2],
+            attribute_names=attribute_names,
+            device=self.device,
+        )
+
+        plt.style.use("science")
 
         attribute_poses_list = []
         attribute_logits_list = []

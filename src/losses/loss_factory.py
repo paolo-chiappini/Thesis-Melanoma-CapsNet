@@ -11,8 +11,11 @@ from .losses_ae import *
 from .lpips_loss import *
 from .mig_loss import *
 from .mpl_loss import *
-from .msr_loss import *
-from .tc_loss import *
+
+# from .msr_loss import *
+# from .tc_loss import *
+
+# TODO: clean up losses
 
 
 class CombinedLoss(nn.Module):
@@ -128,8 +131,19 @@ class CombinedLoss(nn.Module):
                 )
             elif loss_name == "ContrastivePoseLoss":
                 current_loss = loss_module(
-                    attribute_poses=model_outputs.get("attribute_poses"),
+                    attribute_poses=model_outputs.get(
+                        "raw_attribute_capsules", model_outputs.get("attribute_poses")
+                    ),
                     va_labels=targets.get("visual_attributes_targets"),
+                )
+            elif loss_name == "MaskAlignmentLoss":
+                current_loss = loss_module(
+                    predicted_masks=model_outputs.get("predicted_masks"),
+                    gt_masks=targets.get("va_masks"),
+                )
+            elif loss_name == "DisentanglementLoss":
+                current_loss = loss_module(
+                    attribute_poses=model_outputs.get("attribute_poses")
                 )
             else:
                 raise NotImplementedError(

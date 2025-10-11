@@ -1,6 +1,7 @@
-import torch
-import matplotlib.pyplot as plt
 import os
+
+import matplotlib.pyplot as plt
+import torch
 from tqdm import tqdm
 
 
@@ -16,9 +17,11 @@ def perturb_all_capsules(
 ):
     model.eval()
     with torch.no_grad():
-        _, _, _, capsule_pose = model(
+        outputs = model(
             input_image.unsqueeze(0).to(device)
         )  # capsule_pose: [1, N_caps, D, H, W]
+
+        capsule_pose = outputs.get("attribute_poses")
         capsule_pose = capsule_pose.clone()
 
         dim_size = capsule_pose.shape[2]

@@ -3,7 +3,7 @@ dataset:
     root: ./data/EXHAMDataset
     metadata_path: null
     image_extension: null
-    batch_size: 16
+    batch_size: 24
     val_size: 0.1
     test_size: 0.1
 
@@ -11,16 +11,16 @@ preprocess:
     img_size: 256
 
 model:
-    name: LogitCapsnet
+    name: CapsNetWithAttributesMLPUpconv
     channels: 3
     primary_dim: 8
     pose_dim: 16
     num_classes: 2
     routing_steps: 3
-    routing_algorithm: sparsemax
+    routing_algorithm: softmax
     pretrained_encoder_path: checkpoints/new_best_in_town/best_finetune_model.pth
     load_pretrained: True
-    freeze_encoder: True
+    freeze_encoder: False
 
 trainer:
     name: CapsNetTrainerMPL
@@ -29,44 +29,27 @@ trainer:
     lr_decay: 0.96
     loss:
         components:
-            # MultiLabelCapsuleMarginLoss:
-            #     lambda: 10.0
-            #     params:
-            #         m_plus: 0.9
-            #         m_minus: 0.1
-            #         lambda_: 1.0
-            # MultiLabelLogitMarginLoss:
-            #     lambda: 1.0
-            #     params:
-            #         margin: 0.5
             AttributeLoss:
                 lambda: 1.0
                 params: {}
             MalignancyLoss:
-                lambda: 1.0
-                params: {}
+                lambda: 4.0
+                params:
+                    focal_gamma: 2.0
+                    focal_alpha: 0.25
             MSRPerceptualLoss:
-                lambda: 0.5
+                lambda: 0.2
                 params:
                     alpha: 1.0
                     beta: 1.0
                     lambda_bg_global: 1.0
                     lambda_bg_local: 0.1
-            AuxiliaryRoutingLoss:
-                lambda: 1.0
-                params:
-                    aggregation: sum
-            # MIGLoss:
-            #     lambda: 10.0
-            #     params:
-            #         pose_dim: 16
-            #         num_attributes: 5
-            #         lambda_align: 1.0
-            #         lambda_disentangle: 0.1
-            # ContrastivePoseLoss:
-            #     lambda: 1.0
-            #     params:
-            #         temperature: 0.1
+            # DisentanglementLoss:
+            #     lambda: 2000.0
+            #     params: {}
+            # MaskAlignmentLoss:
+            #     lambda: 1.4
+            #     params: {}
 
 callbacks:
     - name: PlotCallback
@@ -88,7 +71,7 @@ metrics:
 system:
     seed: 123
     augment: True
-    save_name: pretrained_gated_routing
+    save_name: default_with_constrained_routing
     save_path: ./checkpoints/
     has_visual_attributes: True
 

@@ -31,6 +31,7 @@ def plot_reconstruction_examples(
     va_masks,
     epoch,
     phase,
+    predicted_masks=None,
     save_dir="reconstructions",
     show=False,
     max_capsules=8,
@@ -47,6 +48,8 @@ def plot_reconstruction_examples(
     capsule_recons = capsule_recons.cpu().detach()
     lesion_masks = lesion_masks.cpu().detach()
     va_masks = va_masks.cpu().detach()
+    if predicted_masks is not None:
+        predicted_masks = predicted_masks.cpu().detach()
 
     images = denormalize(images, mean, std)
     global_recons = denormalize(global_recons, mean, std)
@@ -91,9 +94,17 @@ def plot_reconstruction_examples(
             axes[row, 2].imshow(masked_image.permute(1, 2, 0))
             axes[row, 2].set_title("Masked VA ROI")
 
-            diff = torch.abs(capsule_recons[idx, cap] - images[idx])
-            axes[row, 3].imshow(diff.permute(1, 2, 0))
-            axes[row, 3].set_title("Abs Diff")
+            # Plot predicted masks in place of the absolute difference
+            if predicted_masks is not None:
+                predicted_mask = predicted_masks[
+                    idx, cap
+                ]  # Predicted mask for this capsule
+                axes[row, 3].imshow(
+                    predicted_mask.squeeze(), cmap="gray"
+                )  # Binary mask
+                axes[row, 3].set_title(f"Predicted Mask {cap+1}")
+            else:
+                axes[row, 3].axis("off")  # No predicted masks to show
 
         # Turn off all axes
         for ax_row in axes:

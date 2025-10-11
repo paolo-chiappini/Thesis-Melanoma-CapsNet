@@ -26,7 +26,7 @@ class CapsNetTrainerMPL(BaseTrainer):
             global_reconstructions * lesion_masks, images * lesion_masks
         )
 
-        total_loss.update({"global_pixel": loss_global_pixel * 10.0})
+        # total_loss.update({"global_pixel": loss_global_pixel * 10.0}) # TODO: fix this
 
         if self.current_phase == "val" and self.current_batch == len(
             self.loaders["val"]
@@ -38,6 +38,7 @@ class CapsNetTrainerMPL(BaseTrainer):
                 capsule_recons=local_reconstructions,
                 lesion_masks=lesion_masks,
                 va_masks=va_masks,
+                predicted_masks=outputs.get("predicted_masks", None),
                 epoch=self.current_epoch,
                 phase=self.current_phase,
                 va_mask_labels=visual_attrs,
